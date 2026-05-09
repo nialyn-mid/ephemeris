@@ -12,6 +12,7 @@ export const state = {
     calendars: [],
     currentTime: 0,
     events: [],
+    detailsConsumedInChat: false,
 };
 
 export function loadChatState() {
@@ -33,6 +34,7 @@ export function loadChatState() {
     state.calendars = chatState.calendars || [];
     state.currentTime = chatState.currentTime || 0;
     state.events = chatState.events || [];
+    state.detailsConsumedInChat = chatState.detailsConsumedInChat || false;
 
     logger.debug(`Loaded state for chat ${chatId}`);
 }
@@ -51,6 +53,7 @@ export function saveChatState() {
         calendars: state.calendars,
         currentTime: state.currentTime,
         events: state.events,
+        detailsConsumedInChat: state.detailsConsumedInChat,
     };
 
     if (typeof context.saveSettings === 'function') {

@@ -78,6 +78,7 @@ export function initSettingsUI() {
     bindToggle('ephemeris-injection-enabled', settings.injection, 'enabled');
     bindToggle('ephemeris-inject-events', settings.injection, 'injectEvents');
     bindInput('ephemeris-inject-calendar-details', settings.injection, 'injectCalendarDetails');
+    bindInput('ephemeris-inject-calendar-details-frequency', settings.injection, 'injectCalendarDetailsFrequency');
 
     const $summarizationStrategy = $('#ephemeris-summarization-strategy');
     const updateLodVisibility = () => {

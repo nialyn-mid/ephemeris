@@ -52,6 +52,7 @@ export const defaultSettings = {
         enabled: true,
         injectEvents: true,
         injectCalendarDetails: 'none',
+        injectCalendarDetailsFrequency: 'every', // 'every' | 'turn' | 'chat'
         timeRangeBackward: 3600 * 24, // 1 day
         timeRangeForward: 3600 * 24 * 7, // 1 week
         summarizationStrategy: 'significant', // 'all' | 'significant'
