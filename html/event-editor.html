@@ -1,0 +1,14 @@
+<div class="ephemeris-event-editor">
+    <div class="ephemeris-event-list-container" style="display: flex; gap: 10px; align-items: center; margin-bottom: 15px;">
+        <label>Select Event:</label>
+        <select id="ephemeris-event-select" class="text_pole" style="flex: 1;"></select>
+        <button id="ephemeris-event-add" class="menu_button fa-solid fa-plus" title="Add New Event"></button>
+        <button id="ephemeris-event-delete" class="menu_button danger">Delete</button>
+    </div>
+
+    <div class="ephemeris-event-editor-container" style="display: flex; flex-direction: column; flex: 1;">
+        <label>JSON Definition:</label>
+        <textarea id="ephemeris-event-json" class="text_pole" rows="25" style="width: 100%; font-family: monospace; margin-top: 5px; flex: 1; min-height: 400px;"></textarea>
+        <div id="ephemeris-event-json-error" style="color: var(--red); display: none; margin-top: 5px;">Invalid JSON format.</div>
+    </div>
+</div>

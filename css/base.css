@@ -1,0 +1,44 @@
+/* Ephemeris Base Styles & Variable Mappings */
+:root {
+    /* Mappings to SillyTavern's global variables */
+    --ephemeris-text: var(--SmartThemeBodyColor);
+    --ephemeris-accent: var(--SmartThemeQuoteColor);
+    --ephemeris-bg: var(--SmartThemeChatTintColor);
+    --ephemeris-border: var(--SmartThemeBorderColor);
+    
+    /* Fallbacks if ST variables aren't defined (though they usually are) */
+    --ephemeris-text-fallback: #707c81;
+    --ephemeris-accent-fallback: #0e6a6a;
+    --ephemeris-danger: #ff4d4d;
+}
+
+#ephemeris-settings {
+    display: block !important;
+    width: 100% !important;
+    position: relative !important;
+    height: auto !important;
+    color: var(--ephemeris-text, var(--ephemeris-text-fallback));
+}
+
+.ephemeris-settings-container {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    padding: 5px;
+}
+
+.ephemeris-settings-container .setup-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 4px 0;
+}
+
+.ephemeris-full-width {
+    width: 100% !important;
+    margin: 5px 0 !important;
+}
+
+.ephemeris-time-preview b {
+    color: var(--ephemeris-accent, var(--ephemeris-accent-fallback)) !important;
+}

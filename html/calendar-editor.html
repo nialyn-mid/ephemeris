@@ -1,0 +1,14 @@
+<div class="ephemeris-calendar-editor">
+    <div class="ephemeris-calendar-list-container" style="display: flex; gap: 10px; align-items: center; margin-bottom: 15px;">
+        <label>Select Calendar:</label>
+        <select id="ephemeris-calendar-select" class="text_pole" style="flex: 1;"></select>
+        <button id="ephemeris-calendar-add" class="menu_button fa-solid fa-plus" title="Add New Calendar"></button>
+        <button id="ephemeris-calendar-delete" class="menu_button danger">Delete</button>
+    </div>
+
+    <div class="ephemeris-calendar-editor-container" style="display: flex; flex-direction: column; flex: 1;">
+        <label>JSON Definition:</label>
+        <textarea id="ephemeris-calendar-json" class="text_pole" rows="25" style="width: 100%; font-family: monospace; margin-top: 5px; flex: 1; min-height: 400px;"></textarea>
+        <div id="ephemeris-calendar-json-error" style="color: var(--red); display: none; margin-top: 5px;">Invalid JSON format.</div>
+    </div>
+</div>

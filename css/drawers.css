@@ -1,0 +1,37 @@
+/* Ephemeris Drawer Styles */
+.ephemeris-drawer {
+    border-bottom: 1px solid var(--ephemeris-border, rgba(255,255,255,0.1));
+    margin-bottom: 5px;
+}
+
+.ephemeris-drawer-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 8px;
+    cursor: pointer;
+    background: var(--black30a, rgba(0,0,0,0.3));
+    transition: background 0.2s ease;
+}
+
+.ephemeris-drawer-header:hover {
+    background: var(--white20a, rgba(255,255,255,0.1));
+}
+
+.ephemeris-drawer-header b {
+    font-size: 0.85em;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--ephemeris-accent, #0e6a6a);
+}
+
+.ephemeris-drawer-header i {
+    font-size: 0.8em;
+    opacity: 0.5;
+}
+
+.ephemeris-drawer-content {
+    display: none;
+    padding: 8px 10px 12px 10px;
+    background: var(--ephemeris-bg, transparent);
+}

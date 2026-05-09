@@ -1,0 +1,17 @@
+/* Ephemeris Editor Popup Styles */
+.ephemeris-calendar-editor, .ephemeris-event-editor {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 500px;
+    color: var(--ephemeris-text);
+}
+
+#ephemeris-calendar-json, #ephemeris-event-json {
+    resize: none;
+    line-height: 1.4;
+    font-size: 13px;
+    background: var(--black30a, rgba(0,0,0,0.3));
+    color: var(--ephemeris-text);
+    border: 1px solid var(--ephemeris-border, rgba(255,255,255,0.1));
+}
