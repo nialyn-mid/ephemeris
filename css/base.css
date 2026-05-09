@@ -5,7 +5,7 @@
     --ephemeris-accent: var(--SmartThemeQuoteColor);
     --ephemeris-bg: var(--SmartThemeChatTintColor);
     --ephemeris-border: var(--SmartThemeBorderColor);
-    
+
     /* Fallbacks if ST variables aren't defined (though they usually are) */
     --ephemeris-text-fallback: #707c81;
     --ephemeris-accent-fallback: #0e6a6a;
@@ -37,6 +37,12 @@
 .ephemeris-full-width {
     width: 100% !important;
     margin: 5px 0 !important;
+}
+
+.ephemeris-slider-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
 }
 
 .ephemeris-time-preview b {

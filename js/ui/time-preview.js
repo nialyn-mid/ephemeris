@@ -68,7 +68,14 @@ export function attachTimePreview(inputId) {
         const $content = $(`<div id="${previewId}" class="ephemeris-time-preview-content" style="display:none; padding: 6px 8px; background: rgba(0,0,0,0.15); border-radius: 0 0 4px 4px; border-top: 1px solid rgba(255,255,255,0.05);"></div>`);
 
         $container.append($toggle).append($content);
-        $input.closest('.setup-item').after($container);
+        
+        // Find a suitable insertion point - either after setup-item or simply after the input's container
+        const $setupItem = $input.closest('.setup-item');
+        if ($setupItem.length) {
+            $setupItem.after($container);
+        } else {
+            $input.parent().after($container);
+        }
 
         $toggle.on('click', () => {
             const isOpen = $content.is(':visible');
@@ -82,18 +89,28 @@ export function attachTimePreview(inputId) {
         const val = Number($input.val());
         const calendars = getActiveCalendars();
         const primary = calendars[0];
+        const $wrapper = $(`#${previewId}`).closest('.ephemeris-time-preview-wrapper');
 
         if (primary && val > 0) {
             const label = primary.abbreviation || primary.displayName;
             const shortDur = formatDuration(val, primary);
-            $input.closest('.setup-item').next().find('.ephemeris-toggle-label').text(`Duration: (${label}: ${shortDur})`);
+            $wrapper.find('.ephemeris-toggle-label').text(`Duration: (${label}: ${shortDur})`);
         } else {
-            $input.closest('.setup-item').next().find('.ephemeris-toggle-label').text('Duration');
+            $wrapper.find('.ephemeris-toggle-label').text('Duration');
         }
 
         $(`#${previewId}`).html(createTimePreview(val));
     };
 
     $input.on('input change', update);
+
+    // If there's a paired slider/input (e.g. id and id_value), listen to both
+    const baseId = inputId.endsWith('_value') ? inputId.replace('_value', '') : inputId;
+    const pairedId = inputId.endsWith('_value') ? baseId : `${baseId}_value`;
+    const $paired = $(`#${pairedId}`);
+    if ($paired.length) {
+        $paired.on('input change', update);
+    }
+
     update();
 }

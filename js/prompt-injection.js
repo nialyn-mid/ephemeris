@@ -108,10 +108,14 @@ async function buildInjectionText() {
                 const eTimeObj = convertToTimeObject(event.baseTime, primaryCal);
                 const timeStr = formatTimeObject(eTimeObj, primaryCal);
                 
-                if (timeDiff > 0 && timeDiff <= settings.injection.remindersDistance && settings.injection.remindersEnabled) {
+                const sigMult = 1 + ((event.significance || 1) - 1) * (settings.injection.significanceMultiplier || 0);
+                const effectiveReminderDist = settings.injection.remindersDistance * sigMult;
+                const effectiveNoticeDist = settings.injection.completedNoticesDuration * sigMult;
+
+                if (timeDiff > 0 && timeDiff <= effectiveReminderDist && settings.injection.remindersEnabled) {
                     // Reminder
                     lines.push(`[REMINDER] ${timeStr}: "${event.label}" is approaching!`);
-                } else if (timeDiff < 0 && Math.abs(timeDiff) <= settings.injection.completedNoticesDuration && settings.injection.completedNoticesEnabled) {
+                } else if (timeDiff < 0 && Math.abs(timeDiff) <= effectiveNoticeDist && settings.injection.completedNoticesEnabled) {
                     // Completed Notice
                     lines.push(`[COMPLETED] ${timeStr}: "${event.label}" has recently passed.`);
                 } else {

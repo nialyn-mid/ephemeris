@@ -27,7 +27,8 @@
                                 Chat Events</button>
                         </div>
                         <div class="setup-item">
-                            <button id="ephemeris-reset-global-calendars" class="menu_button ephemeris-full-width" style="color: var(--ephemeris-danger);">Reset Global Calendars</button>
+                            <button id="ephemeris-reset-global-calendars" class="menu_button ephemeris-full-width"
+                                style="color: var(--ephemeris-danger);">Reset Global Calendars</button>
                         </div>
                         <div class="setup-item">
                             <small><b>Log Level</b></small>
@@ -53,10 +54,8 @@
                             <input type="checkbox" id="ephemeris-injection-enabled">
                         </div>
 
-                        <div class="setup-item">
-                            <label for="ephemeris-inject-events">Inject Events List</label>
-                            <input type="checkbox" id="ephemeris-inject-events">
-                        </div>
+                        <hr>
+
                         <div class="setup-item">
                             <small>Inject Calendar Details</small>
                             <select id="ephemeris-inject-calendar-details" class="text_pole">
@@ -65,6 +64,13 @@
                                 <option value="chat">Chat Only</option>
                                 <option value="global">Global Only</option>
                             </select>
+                        </div>
+
+                        <hr>
+
+                        <div class="setup-item">
+                            <label for="ephemeris-inject-events">Inject Events List</label>
+                            <input type="checkbox" id="ephemeris-inject-events">
                         </div>
 
                         <div class="setup-item">
@@ -87,14 +93,25 @@
                             </div>
                         </div>
 
-                        <div class="setup-item">
-                            <small>Backward Range (Seconds)</small>
-                            <input type="number" id="ephemeris-range-backward" class="text_pole" min="0">
-                        </div>
-
-                        <div class="setup-item">
-                            <small>Forward Range (Seconds)</small>
-                            <input type="number" id="ephemeris-range-forward" class="text_pole" min="0">
+                        <div class="ephemeris-slider-row" style="display: flex; flex-wrap: wrap; margin-bottom: 10px;">
+                            <div
+                                class="alignitemscenter flex-container flexFlowColumn flexGrow flexShrink gap0 flexBasis48p">
+                                <small><span style="font-weight: bold; margin-bottom: 2px; display: block;">Backward
+                                        Range</span></small>
+                                <input class="neo-range-slider" type="range" id="ephemeris-range-backward" min="0"
+                                    max="31536000" step="3600">
+                                <input class="neo-range-input" type="number" id="ephemeris-range-backward_value"
+                                    data-for="ephemeris-range-backward" min="0" max="31536000" step="3600">
+                            </div>
+                            <div
+                                class="alignitemscenter flex-container flexFlowColumn flexGrow flexShrink gap0 flexBasis48p">
+                                <small><span style="font-weight: bold; margin-bottom: 2px; display: block;">Forward
+                                        Range</span></small>
+                                <input class="neo-range-slider" type="range" id="ephemeris-range-forward" min="0"
+                                    max="31536000" step="3600">
+                                <input class="neo-range-input" type="number" id="ephemeris-range-forward_value"
+                                    data-for="ephemeris-range-forward" min="0" max="31536000" step="3600">
+                            </div>
                         </div>
 
                         <hr>
@@ -104,21 +121,46 @@
                             <input type="checkbox" id="ephemeris-reminders-enabled">
                         </div>
 
-                        <div class="setup-item">
-                            <small>Reminder Distance (Seconds)</small>
-                            <input type="number" id="ephemeris-reminders-distance" class="text_pole" min="0">
+                        <div class="ephemeris-slider-row" style="margin-bottom: 10px;">
+                            <div
+                                class="alignitemscenter flex-container flexFlowColumn flexGrow flexShrink gap0 flexBasis48p">
+                                <small><span style="font-weight: bold; margin-bottom: 2px; display: block;">Reminder
+                                        Distance</span></small>
+                                <input class="neo-range-slider" type="range" id="ephemeris-reminders-distance" min="0"
+                                    max="2592000" step="3600">
+                                <input class="neo-range-input" type="number" id="ephemeris-reminders-distance_value"
+                                    data-for="ephemeris-reminders-distance" min="0" max="2592000" step="3600">
+                            </div>
                         </div>
-
-                        <hr>
 
                         <div class="setup-item">
                             <label for="ephemeris-notices-enabled">Enable Completion Notices</label>
                             <input type="checkbox" id="ephemeris-notices-enabled">
                         </div>
 
-                        <div class="setup-item">
-                            <small>Notice Duration (Seconds)</small>
-                            <input type="number" id="ephemeris-notices-duration" class="text_pole" min="0">
+                        <div class="ephemeris-slider-row" style="margin-bottom: 10px;">
+                            <div
+                                class="alignitemscenter flex-container flexFlowColumn flexGrow flexShrink gap0 flexBasis48p">
+                                <small><span style="font-weight: bold; margin-bottom: 2px; display: block;">Notice
+                                        Duration</span></small>
+                                <input class="neo-range-slider" type="range" id="ephemeris-notices-duration" min="0"
+                                    max="604800" step="3600">
+                                <input class="neo-range-input" type="number" id="ephemeris-notices-duration_value"
+                                    data-for="ephemeris-notices-duration" min="0" max="604800" step="3600">
+                            </div>
+                        </div>
+
+                        <div class="ephemeris-slider-row" style="margin-bottom: 10px;">
+                            <div
+                                class="alignitemscenter flex-container flexFlowColumn flexGrow flexShrink gap0 flexBasis48p">
+                                <small><span style="font-weight: bold; margin-bottom: 2px; display: block;">Significance
+                                        Distance Multiplier</span></small>
+                                <input class="neo-range-slider" type="range" id="ephemeris-significance-multiplier"
+                                    min="0" max="10" step="0.1">
+                                <input class="neo-range-input" type="number"
+                                    id="ephemeris-significance-multiplier_value"
+                                    data-for="ephemeris-significance-multiplier" min="0" max="10" step="0.1">
+                            </div>
                         </div>
                     </div>
                 </div>
