@@ -37,10 +37,17 @@ export function registerUpdateEventTool() {
                 description: { type: 'string', description: 'Description in simple present tense.' },
                 significance: significanceSchema(sigDescription),
                 tags: { type: 'array', items: { type: 'string' }, description: 'Tags for filtering. E.g. [country name], "holiday", "personal"' },
+                responseCalendarId: calendarIdSchema('Optional: Additionally shows the event time according to this calendar in the response.')
             },
             required: ['calendarId'],
         },
         action: async (params) => {
+            const { waitForDependency } = await import('./tool-queue.js');
+            await waitForDependency('calendar', params.calendarId);
+            if (params.responseCalendarId) {
+                await waitForDependency('calendar', params.responseCalendarId);
+            }
+
             const cal = getCalendar(params.calendarId);
             if (!cal) {
                 throw new RejectedCallError(`Calendar '${params.calendarId}' not found.`);
@@ -63,22 +70,13 @@ export function registerUpdateEventTool() {
                 existing = state.events.find(e => e.id === params.id);
             }
 
+            let updatedEvent = null;
+            let isNew = !existing;
+
             if (existing) {
                 // Update mode
                 const oldEvent = JSON.parse(JSON.stringify(existing));
-                const updated = updateEvent(params.id, eventData);
-
-                const { generateChangelog } = await import('../formatter.js');
-                const changes = generateChangelog(oldEvent, updated);
-
-                return JSON.stringify({
-                    status: 'ok',
-                    error: false,
-                    message: `Event "${updated.label}" updated.` + (changes.length > 0 ? ` Changes: ${changes.join('; ')}` : ''),
-                    eventId: updated.id,
-                    event: updated,
-                    changes: changes
-                }, null, 2);
+                updatedEvent = updateEvent(params.id, eventData);
             } else {
                 // Create mode
                 if (!params.label || !params.timeObject) {
@@ -88,14 +86,56 @@ export function registerUpdateEventTool() {
                     throw new RejectedCallError(msg);
                 }
                 const eventId = addEvent(eventData);
-                return JSON.stringify({
-                    status: 'ok',
-                    error: false,
-                    message: `Event "${params.label}" ${params.id ? 'created with custom ID' : 'scheduled'}.`,
-                    eventId: eventId,
-                    baseTime: eventData.baseTime
-                }, null, 2);
+                updatedEvent = state.events.find(e => e.id === eventId);
             }
+
+            // Prepare response calendar info
+            let responseCalendarTime = null;
+            if (params.responseCalendarId) {
+                const respCal = getCalendar(params.responseCalendarId);
+                if (respCal) {
+                    const { convertToTimeObject, formatTimeObject } = await import('../time-engine.js');
+                    responseCalendarTime = {
+                        calendarId: respCal.id,
+                        displayName: respCal.displayName,
+                        time: convertToTimeObject(updatedEvent.baseTime, respCal),
+                        timeStr: formatTimeObject(convertToTimeObject(updatedEvent.baseTime, respCal), respCal)
+                    };
+                }
+            }
+
+            const { generateChangelog } = await import('../formatter.js');
+            const changes = isNew ? [] : generateChangelog(existing, updatedEvent);
+            
+            const calLabel = cal.abbreviation || cal.displayName || cal.id;
+            let message = `Event "${updatedEvent.label}" ${isNew ? 'scheduled' : 'updated'} for eventTime (${calLabel})`;
+            
+            if (responseCalendarTime) {
+                const respCal = getCalendar(responseCalendarTime.calendarId);
+                const respLabel = respCal?.abbreviation || respCal?.displayName || respCal?.id || responseCalendarTime.calendarId;
+                message += `, which is responseCalendarTime in ${respLabel}`;
+            }
+
+            if (changes.length > 0) {
+                message += `. Changes: ${changes.join('; ')}`;
+            }
+
+            return JSON.stringify({
+                status: 'ok',
+                error: false,
+                message: message,
+                eventId: updatedEvent.id,
+                eventTime: {
+                    calendarId: cal.id,
+                    displayName: cal.displayName,
+                    time: params.timeObject || (updatedEvent ? {} : null), // simplified
+                    timeStr: updatedEvent.timeStr // We might want to format this
+                },
+                responseCalendarTime: responseCalendarTime,
+                event: updatedEvent,
+                changes: changes
+            }, null, 2);
         },
+
     });
 }

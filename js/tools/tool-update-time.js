@@ -29,14 +29,18 @@ export function registerUpdateTimeTool() {
             const timeDelta = params.timeDelta || params.TimeDelta;
             const respCalId = params.responseCalendarId || params.response_calendar_id;
 
+            const { calculateDeltaSeconds, convertToTimeObject, formatTimeObject } = await import('../time-engine.js');
+            const { waitForDependency } = await import('./tool-queue.js');
+
+            await waitForDependency('calendar', calId);
+
             const cal = getCalendar(calId);
             if (!cal) {
                 throw new RejectedCallError(`Calendar '${calId}' not found.`);
             }
 
-            const { calculateDeltaSeconds, convertToTimeObject, formatTimeObject } = await import('../time-engine.js');
-
             const oldTime = state.currentTime;
+
             let targetBaseTime = oldTime;
 
             if (timeObj) {

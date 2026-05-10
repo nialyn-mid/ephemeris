@@ -172,64 +172,70 @@ Tips:
             required: ['id'],
         },
         action: async (params) => {
-            const existingIndex = state.calendars.findIndex(c => c.id === params.id);
-            const isNew = existingIndex === -1;
+            const { provideDependency } = await import('./tool-queue.js');
+            try {
+                const existingIndex = state.calendars.findIndex(c => c.id === params.id);
+                const isNew = existingIndex === -1;
 
-            // 1. Initialize target (either clone existing or start empty)
-            const oldCalendar = isNew ? null : JSON.parse(JSON.stringify(state.calendars[existingIndex]));
-            let targetCalendar = isNew ? { units: [] } : JSON.parse(JSON.stringify(oldCalendar));
+                // 1. Initialize target (either clone existing or start empty)
+                const oldCalendar = isNew ? null : JSON.parse(JSON.stringify(state.calendars[existingIndex]));
+                let targetCalendar = isNew ? { units: [] } : JSON.parse(JSON.stringify(oldCalendar));
 
-            // 2. Apply BaseTemplate if provided (replaces existing base if specified)
-            if (params.baseTemplate) {
-                const baseCal = getCalendar(params.baseTemplate);
-                if (!baseCal) {
-                    throw new RejectedCallError(`Base template '${params.baseTemplate}' not found.`);
+                // 2. Apply BaseTemplate if provided (replaces existing base if specified)
+                if (params.baseTemplate) {
+                    const baseCal = getCalendar(params.baseTemplate);
+                    if (!baseCal) {
+                        throw new RejectedCallError(`Base template '${params.baseTemplate}' not found.`);
+                    }
+                    // Merge template into our target
+                    targetCalendar = { ...targetCalendar, ...JSON.parse(JSON.stringify(baseCal)) };
                 }
-                // Merge template into our target
-                targetCalendar = { ...targetCalendar, ...JSON.parse(JSON.stringify(baseCal)) };
-            }
 
-            // 3. Apply Overrides
-            targetCalendar.id = params.id;
-            if (params.displayName) targetCalendar.displayName = params.displayName;
-            if (params.units) targetCalendar.units = params.units;
-            if (params.epochOffset !== undefined) targetCalendar.epochOffset = params.epochOffset;
-            if (params.conversionFactor !== undefined) targetCalendar.conversionFactor = params.conversionFactor;
-            if (params.notes !== undefined) targetCalendar.notes = params.notes;
-            if (params.abbreviation) targetCalendar.abbreviation = params.abbreviation;
+                // 3. Apply Overrides
+                targetCalendar.id = params.id;
+                if (params.displayName) targetCalendar.displayName = params.displayName;
+                if (params.units) targetCalendar.units = params.units;
+                if (params.epochOffset !== undefined) targetCalendar.epochOffset = params.epochOffset;
+                if (params.conversionFactor !== undefined) targetCalendar.conversionFactor = params.conversionFactor;
+                if (params.notes !== undefined) targetCalendar.notes = params.notes;
+                if (params.abbreviation) targetCalendar.abbreviation = params.abbreviation;
 
-            // 4. Resolve relative lengths
-            if (targetCalendar.units) {
-                resolveLengths(targetCalendar.units);
-            }
-
-            // 5. Validation
-            if (isNew) {
-                if (!targetCalendar.displayName) {
-                    throw new RejectedCallError('displayName is required for new calendars.');
+                // 4. Resolve relative lengths
+                if (targetCalendar.units) {
+                    resolveLengths(targetCalendar.units);
                 }
-                if (!targetCalendar.units || targetCalendar.units.length === 0) {
-                    throw new RejectedCallError('units or a valid baseTemplate are required for new calendars.');
+
+                // 5. Validation
+                if (isNew) {
+                    if (!targetCalendar.displayName) {
+                        throw new RejectedCallError('displayName is required for new calendars.');
+                    }
+                    if (!targetCalendar.units || targetCalendar.units.length === 0) {
+                        throw new RejectedCallError('units or a valid baseTemplate are required for new calendars.');
+                    }
+                    state.calendars.push(targetCalendar);
+                } else {
+                    state.calendars[existingIndex] = targetCalendar;
                 }
-                state.calendars.push(targetCalendar);
-            } else {
-                state.calendars[existingIndex] = targetCalendar;
+
+                saveChatState();
+
+                const { generateChangelog } = await import('../formatter.js');
+                const changes = isNew ? [] : generateChangelog(oldCalendar, targetCalendar);
+
+                return JSON.stringify({
+                    status: 'ok',
+                    error: false,
+                    message: `Calendar '${targetCalendar.displayName}' ${isNew ? 'created' : 'updated'}.` + (changes.length > 0 ? ` Changes: ${changes.join('; ')}` : ''),
+                    calendarId: targetCalendar.id,
+                    isNew: isNew,
+                    changes: changes
+                }, null, 2);
+            } finally {
+                provideDependency('calendar', params.id);
             }
-
-            saveChatState();
-
-            const { generateChangelog } = await import('../formatter.js');
-            const changes = isNew ? [] : generateChangelog(oldCalendar, targetCalendar);
-
-            return JSON.stringify({
-                status: 'ok',
-                error: false,
-                message: `Calendar '${targetCalendar.displayName}' ${isNew ? 'created' : 'updated'}.` + (changes.length > 0 ? ` Changes: ${changes.join('; ')}` : ''),
-                calendarId: targetCalendar.id,
-                isNew: isNew,
-                changes: changes
-            }, null, 2);
         },
+
     });
 }
 
