@@ -57,7 +57,8 @@ Tip: Use 'baseTemplate': 'gregorian' to inherit the standard structure and only 
             const isNew = existingIndex === -1;
 
             // 1. Initialize target (either clone existing or start empty)
-            let targetCalendar = isNew ? { units: [] } : JSON.parse(JSON.stringify(state.calendars[existingIndex]));
+            const oldCalendar = isNew ? null : JSON.parse(JSON.stringify(state.calendars[existingIndex]));
+            let targetCalendar = isNew ? { units: [] } : JSON.parse(JSON.stringify(oldCalendar));
 
             // 2. Apply BaseTemplate if provided (replaces existing base if specified)
             if (params.baseTemplate) {
@@ -93,13 +94,18 @@ Tip: Use 'baseTemplate': 'gregorian' to inherit the standard structure and only 
 
             saveChatState();
             
+            const { generateChangelog } = await import('../formatter.js');
+            const changes = isNew ? [] : generateChangelog(oldCalendar, targetCalendar);
+
             return JSON.stringify({
                 status: 'ok',
                 error: false,
-                message: `Calendar '${targetCalendar.displayName}' ${isNew ? 'created' : 'updated'}.`,
+                message: `Calendar '${targetCalendar.displayName}' ${isNew ? 'created' : 'updated'}.` + (changes.length > 0 ? ` Changes: ${changes.join('; ')}` : ''),
                 calendarId: targetCalendar.id,
-                isNew: isNew
+                isNew: isNew,
+                changes: changes
             }, null, 2);
         },
     });
 }
+

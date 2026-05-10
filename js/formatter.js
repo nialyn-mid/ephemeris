@@ -91,3 +91,35 @@ export function formatCalendarDetails(cal) {
 
     return details;
 }
+
+/**
+ * Generates a human-readable list of changes between two objects.
+ */
+export function generateChangelog(oldObj, newObj, keysToIgnore = []) {
+    const changes = [];
+    const allKeys = [...new Set([...Object.keys(oldObj || {}), ...Object.keys(newObj || {})])];
+
+    for (const key of allKeys) {
+        if (keysToIgnore.includes(key)) continue;
+
+        const oldVal = oldObj ? oldObj[key] : undefined;
+        const newVal = newObj ? newObj[key] : undefined;
+
+        // Skip if both are essentially empty/undefined
+        if (oldVal === newVal) continue;
+        
+        // Deep equality check for arrays/objects (like units or tags)
+        if (JSON.stringify(oldVal) === JSON.stringify(newVal)) continue;
+
+        const oldDisplay = (oldVal !== undefined && oldVal !== null && String(oldVal) !== '') 
+            ? (typeof oldVal === 'object' ? JSON.stringify(oldVal) : String(oldVal)) 
+            : '(none)';
+        const newDisplay = (newVal !== undefined && newVal !== null && String(newVal) !== '') 
+            ? (typeof newVal === 'object' ? JSON.stringify(newVal) : String(newVal)) 
+            : '(none)';
+
+        changes.push(`${key}: ${oldDisplay} → ${newDisplay}`);
+    }
+    return changes;
+}
+

@@ -12,7 +12,7 @@ function generateId() {
 
 export function addEvent(eventData) {
     const newEvent = {
-        id: generateId(),
+        id: eventData.id || generateId(),
         label: eventData.label || 'Unnamed Event',
         description: eventData.description || '',
         baseTime: eventData.baseTime || 0,

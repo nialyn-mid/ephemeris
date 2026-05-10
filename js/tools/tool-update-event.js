@@ -25,11 +25,11 @@ export function registerUpdateEventTool() {
     registerFunctionTool({
         name: 'eph_update_event',
         displayName: 'Ephemeris: Update Event',
-        description: 'Creates or updates a world event. If an ID is provided, it patches the existing event. Otherwise, it creates a new one.',
+        description: 'Creates or updates a world event. If an ID is provided, it attempts to update that event. If the ID does not exist, a new event is created with that ID (requires label and timeObject). If no ID is provided, a new event is created with a generated ID.',
         parameters: {
             type: 'object',
             properties: {
-                id: { type: 'string', description: 'Unique identifier of the event to update. Omit to create a new event.' },
+                id: { type: 'string', description: 'Unique identifier of the event. Provide to update or specify a custom ID on creation.' },
                 calendarId: calendarIdSchema(),
                 timeObject: timeObjectSchema('Time of the event. Required for new events.'),
                 label: { type: 'string', description: 'Short name. Required for new events.' },
@@ -46,6 +46,7 @@ export function registerUpdateEventTool() {
             }
 
             const eventData = {};
+            if (params.id) eventData.id = params.id;
             if (params.timeObject) {
                 eventData.baseTime = convertToBaseTime(params.timeObject, cal);
                 eventData.sourceCalendar = params.calendarId;
@@ -55,29 +56,41 @@ export function registerUpdateEventTool() {
             if (params.significance !== undefined) eventData.significance = params.significance;
             if (params.tags) eventData.tags = params.tags;
 
+            // Check if we are updating
+            let existing = null;
             if (params.id) {
+                existing = state.events.find(e => e.id === params.id);
+            }
+
+            if (existing) {
                 // Update mode
+                const oldEvent = JSON.parse(JSON.stringify(existing));
                 const updated = updateEvent(params.id, eventData);
-                if (!updated) {
-                    throw new RejectedCallError(`Event with ID '${params.id}' not found.`);
-                }
+                
+                const { generateChangelog } = await import('../formatter.js');
+                const changes = generateChangelog(oldEvent, updated);
+
                 return JSON.stringify({
                     status: 'ok',
                     error: false,
-                    message: `Event "${updated.label}" updated.`,
+                    message: `Event "${updated.label}" updated.` + (changes.length > 0 ? ` Changes: ${changes.join('; ')}` : ''),
                     eventId: updated.id,
-                    event: updated
+                    event: updated,
+                    changes: changes
                 }, null, 2);
             } else {
                 // Create mode
                 if (!params.label || !params.timeObject) {
-                    throw new RejectedCallError('label and timeObject are required for new events.');
+                    const msg = params.id 
+                        ? `Event ID '${params.id}' not found. To create a new event with this ID, both 'label' and 'timeObject' are required.`
+                        : 'label and timeObject are required for new events.';
+                    throw new RejectedCallError(msg);
                 }
                 const eventId = addEvent(eventData);
                 return JSON.stringify({
                     status: 'ok',
                     error: false,
-                    message: `Event "${params.label}" scheduled.`,
+                    message: `Event "${params.label}" ${params.id ? 'created with custom ID' : 'scheduled'}.`,
                     eventId: eventId,
                     baseTime: eventData.baseTime
                 }, null, 2);
