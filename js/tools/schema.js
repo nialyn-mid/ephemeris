@@ -24,3 +24,10 @@ export const significanceSchema = (description) => ({
     maximum: 10,
     description: description || 'Importance rating from 1 (minor) to 10 (world-altering).'
 });
+
+export const lengthInSubUnitsSchema = () => ({
+    type: 'object',
+    description: 'Define length relative to another unit. Example: {"Hour": 28} to define a Day as 28 Hours. The referenced unit must be defined in the same calendar.',
+    additionalProperties: { type: 'number' }
+});
+
