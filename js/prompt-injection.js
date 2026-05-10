@@ -28,6 +28,14 @@ export function initPromptInjection() {
     eventSource.on(event_types.CHAT_CHANGED, () => {
         detailsConsumedInTurn = false;
         pendingTaskConsumption = null;
+
+        // Reset per-chat flag if we rolled back to the beginning
+        const chat = getContext().chat || [];
+        const userMessages = chat.filter(m => m.is_user && !m.is_system);
+        if (userMessages.length <= 1) {
+            state.detailsConsumedInChat = false;
+        }
+
         update();
     });
 
