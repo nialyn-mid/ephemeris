@@ -71,17 +71,36 @@ function resolveLengths(units) {
         }
     }
 
-    // Final check for unresolvable units
-    for (const unit of units) {
-        if (unit.type !== 'string' && !unit.lengthInBase) {
-            // Strings are allowed to have 0/null length if they are purely descriptive, 
-            // but usually they follow a number unit.
-            if (unit.type === 'number' || unit.type === 'variable' || unit.type === 'cyclic') {
-                throw new RejectedCallError(`Could not resolve length for unit '${unit.name}'. Ensure it provides 'lengthInBase' or a 'lengthInSubUnits' that references a known unit.`);
+    // Final check for unresolvable units with improved error reporting
+    const unresolved = units.filter(u => u.type !== 'string' && !u.lengthInBase);
+
+    if (unresolved.length > 0) {
+        const errorDetails = unresolved.map(u => {
+            if (u.lengthInSubUnits) {
+                const subUnitName = Object.keys(u.lengthInSubUnits)[0];
+                const subUnitExists = units.find(target => target.name === subUnitName);
+                if (!subUnitExists) {
+                    return `'${u.name}' depends on non-existent unit '${subUnitName}'`;
+                } else {
+                    return `'${u.name}' depends on '${subUnitName}' which is also unresolved`;
+                }
+            } else if (u.type === 'number' || u.type === 'variable' || u.type === 'cyclic') {
+                return `'${u.name}' provides neither 'lengthInBase' nor 'lengthInSubUnits'`;
             }
+            return null;
+        }).filter(Boolean);
+
+        const primaryError = unresolved[0]; // Galactic Cycle in the user's case
+        let message = `Could not resolve length for unit '${primaryError.name}'.`;
+
+        if (errorDetails.length > 0) {
+            message += ` Root issues found: ${errorDetails.join('; ')}.`;
         }
+
+        throw new RejectedCallError(message);
     }
 }
+
 
 export function registerUpdateCalendarTool() {
     const { registerFunctionTool } = getContext();
@@ -94,8 +113,11 @@ Supported Unit Types:
 - 'number': Basic division (e.g. Hour = 3600s). Use startAtOne: true for 1-indexed (e.g. Day 1). Use startValue (e.g. 1970) for timeline anchoring.
 - 'variable': For units with varying lengths (e.g. Months). Provide 'values' as an array of objects: [{"name": "Jan", "lengthInBase": 2678400}, ...]
 - 'cyclic': For repeating cycles (e.g. Weekdays). Provide 'values' as strings and an optional 'offset'.
-Tip: You can define unit lengths relative to each other using 'lengthInSubUnits' (e.g. Day = 28 Hours) to avoid long number math.
-Tip: Use 'baseTemplate': [calendar_id] to inherit a defined calendar structure and only override what you need.`;
+Tips:
+- Use 'baseTemplate': [calendar_id] to inherit a defined calendar structure and only override what you need.
+- You can define unit lengths relative to each other using 'lengthInSubUnits' (e.g. Day = 28 Hours) to avoid long number math.
+- Define starting with the smallest unit first - using lengthInBase to define the smallest unit against the Base Time (Seconds) - to avoid errors.
+- Create calendars before setting the current time or creating events intended to be used with them.`;
 
     registerFunctionTool({
         name: 'eph_update_calendar',

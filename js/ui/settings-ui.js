@@ -3,6 +3,7 @@ import { settings, saveSettings, updateSetting, defaultSettings } from '../setti
 import { attachTimePreview } from './time-preview.js';
 import { openCalendarPopup } from './calendar-editor.js';
 import { openEventPopup } from './event-editor.js';
+import { openTimePopup } from './time-editor.js';
 import { Popup, POPUP_TYPE, POPUP_RESULT } from '/scripts/popup.js';
 
 export function initSettingsUI() {
@@ -149,6 +150,10 @@ export function initSettingsUI() {
 
     $('#ephemeris-open-chat-events').on('click', () => {
         openEventPopup();
+    });
+
+    $('#ephemeris-open-chat-time').on('click', () => {
+        openTimePopup();
     });
 
     $('#ephemeris-reset-global-calendars').on('click', async () => {

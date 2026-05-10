@@ -103,6 +103,7 @@ export function saveSettings() {
     } else if (typeof context.saveSettingsDebounced === 'function') {
         context.saveSettingsDebounced();
     }
+    eventSource.emit('ephemeris-settings-changed');
     logger.debug('Settings saved.');
 }
 

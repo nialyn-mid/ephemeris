@@ -20,6 +20,8 @@ export function initPromptInjection() {
     const update = () => updateExtensionPrompt();
 
     eventSource.on(event_types.CHARACTER_MESSAGE_RENDERED, update);
+    eventSource.on('ephemeris-state-changed', update);
+    eventSource.on('ephemeris-settings-changed', update);
     eventSource.on(event_types.USER_MESSAGE_RENDERED, () => {
         detailsConsumedInTurn = false;
         pendingTaskConsumption = null;
@@ -111,12 +113,12 @@ async function buildInjectionText() {
     const primaryCal = calendars[0]; // Assume first is primary
     const curTimeObj = convertToTimeObject(state.currentTime, primaryCal);
     lines.push(`## World Time`);
-    lines.push(`Current Time (${primaryCal.displayName}): ${formatTimeObject(curTimeObj, primaryCal)}`);
+    lines.push(`Current Time (${primaryCal.displayName} [${primaryCal.id}]): ${formatTimeObject(curTimeObj, primaryCal)}`);
 
     // Add secondary calendars if available
     for (let i = 1; i < Math.min(3, calendars.length); i++) {
         const cObj = convertToTimeObject(state.currentTime, calendars[i]);
-        lines.push(`Alternative (${calendars[i].displayName}): ${formatTimeObject(cObj, calendars[i])}`);
+        lines.push(`Alternative (${calendars[i].displayName} [${calendars[i].id}]): ${formatTimeObject(cObj, calendars[i])}`);
     }
 
     // 1.5 Calendar Details (Optional)
@@ -133,10 +135,6 @@ async function buildInjectionText() {
     } else if (freq === 'chat' && state.detailsConsumedInChat) {
         shouldSkipDetails = true;
     } else if (freq === 'turn' && !isStart && !detailsConsumedInTurn) {
-        // If we are past the start and using 'turn' mode, we might still want to inject 
-        // if it hasn't been consumed in THIS turn yet. 
-        // But Permasion's 'isStart' logic suggests only injecting at the VERY start.
-        // User said: "assume permasion is doing it correctly".
         if (!isStart) shouldSkipDetails = true;
     }
 
@@ -156,25 +154,27 @@ async function buildInjectionText() {
         }
     }
 
-    // 2. Reminders & Timeline
+    // 2. Reminders & Schedule
     if (settings.injection.injectEvents) {
         const upcoming = getUpcomingEvents(state.currentTime, settings.injection.timeRangeForward);
         const past = getPastEvents(state.currentTime, settings.injection.timeRangeBackward);
 
-        const relevantEvents = [...past, ...upcoming].sort((a, b) => a.baseTime - b.baseTime);
+        // Deduplicate events by ID
+        const eventMap = new Map();
+        [...past, ...upcoming].forEach(e => eventMap.set(e.id, e));
+        const relevantEvents = Array.from(eventMap.values()).sort((a, b) => a.baseTime - b.baseTime);
 
         if (relevantEvents.length > 0) {
-            lines.push(`\n## Chronicle & Reminders`);
+            lines.push(`\n## Chronicle & Schedule`);
 
             for (const event of relevantEvents) {
                 const timeDiff = event.baseTime - state.currentTime;
 
-                // Summarization check: if it's far away and low significance, maybe skip?
-                // "Summarization Strategy": 'significant' only shows events >= 5 if they are further than 1 day away
+                // Summarization check
                 if (settings.injection.summarizationStrategy === 'significant') {
                     const maxDist = settings.injection.significanceDistances[event.significance] || 0;
                     if (Math.abs(timeDiff) > maxDist) {
-                        continue; // Skip if beyond the allowed distance for this significance level
+                        continue;
                     }
                 }
 
@@ -185,19 +185,18 @@ async function buildInjectionText() {
                 const effectiveReminderDist = settings.injection.remindersDistance * sigMult;
                 const effectiveNoticeDist = settings.injection.completedNoticesDuration * sigMult;
 
+                let statusSuffix = '';
                 if (timeDiff > 0 && timeDiff <= effectiveReminderDist && settings.injection.remindersEnabled) {
-                    // Reminder
-                    lines.push(`[REMINDER] ${timeStr}: "${event.label}" is approaching!`);
+                    statusSuffix = ' (Approaching)';
                 } else if (timeDiff < 0 && Math.abs(timeDiff) <= effectiveNoticeDist && settings.injection.completedNoticesEnabled) {
-                    // Completed Notice
-                    lines.push(`[COMPLETED] ${timeStr}: "${event.label}" has recently passed.`);
-                } else {
-                    // Standard timeline entry
-                    lines.push(`- [${timeStr}] ${event.label}`);
+                    statusSuffix = ' (Passed)';
                 }
+
+                lines.push(`- [${timeStr}] ${event.label}${statusSuffix}`);
             }
         }
     }
+
 
 
     return `<ephemeris_context>\n<!-- ${CONTEXT_MARKER} -->\n${lines.join('\n')}\n</ephemeris_context>`;

@@ -11,6 +11,11 @@ export function getActiveCalendars() {
     const globals = settings.globalCalendars || [];
     const chatCals = state.calendars || [];
 
+    logger.debug(`[CAL-MGR] Merging: Globals(${globals.length}), Chat(${chatCals.length})`);
+    if (chatCals.length > 0) {
+        logger.debug(`[CAL-MGR] Chat calendar IDs: ${chatCals.map(c => c.id).join(', ')}`);
+    }
+
     // Map to remove duplicates, preferring chat calendars
     const map = new Map();
     for (const cal of globals) {
@@ -21,7 +26,7 @@ export function getActiveCalendars() {
     }
 
     const result = Array.from(map.values());
-    logger.debug('Resolved Active Calendars:', result);
+    logger.debug(`[CAL-MGR] Resolved: ${result.map(c => c.id).join(', ')}`);
     return result;
 }
 

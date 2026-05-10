@@ -118,20 +118,33 @@ function bindPopupEvents(dlg) {
         $select.val(newCal.id).trigger('change');
     });
 
-    $dlg.find('#ephemeris-calendar-delete').on('click', () => {
+    $dlg.find('#ephemeris-calendar-delete').on('click', async () => {
         const id = $select.val();
-        currentCalendars = currentCalendars.filter(c => c.id !== id);
+        if (!id) return;
 
-        if (popupMode === 'global') {
-            settings.globalCalendars = currentCalendars;
-            saveSettings();
-        } else {
-            state.calendars = currentCalendars;
-            saveChatState();
+        const confirm = new Popup(`Are you sure you want to delete the calendar '${id}'? This cannot be undone.`, POPUP_TYPE.CONFIRM);
+        const result = await confirm.show();
+
+        if (result === POPUP_RESULT.AFFIRMATIVE) {
+            currentCalendars = currentCalendars.filter(c => c.id !== id);
+
+            if (popupMode === 'global') {
+                settings.globalCalendars = currentCalendars;
+                saveSettings();
+            } else {
+                state.calendars = currentCalendars;
+                saveChatState();
+            }
+
+            // Clear fields
+            $notes.val('');
+            $json.val('');
+
+            refreshCalendarSelect(dlg);
+            toastr.success(`Calendar '${id}' deleted.`);
         }
-
-        refreshCalendarSelect(dlg);
     });
+
 }
 
 function refreshCalendarSelect(dlg) {

@@ -42,7 +42,10 @@ export function loadChatState() {
     state.events = chatState.events || [];
     state.detailsConsumedInChat = chatState.detailsConsumedInChat || false;
 
-    logger.debug(`Loaded state for chat ${chatId}`);
+    logger.info(`[STATE] Loaded chat ${chatId}. Calendars: ${state.calendars.length}, Events: ${state.events.length}`);
+    if (state.calendars.length > 0) {
+        logger.debug(`[STATE] Chat calendars: ${state.calendars.map(c => c.id).join(', ')}`);
+    }
 }
 
 // Add listener to handle chat switching automatically
@@ -82,6 +85,7 @@ export function saveChatState() {
     if (settings) {
         if (!settings.chatStates) settings.chatStates = {};
         settings.chatStates[chatId] = chatState;
+        logger.debug(`[STATE] Synced chat state to global settings object.`);
     }
 
     if (typeof context.saveSettings === 'function') {
@@ -90,11 +94,13 @@ export function saveChatState() {
         context.saveSettingsDebounced();
     }
 
-    logger.debug(`Saved state for chat ${chatId}`);
+    logger.info(`[STATE] Saved chat ${chatId}. Calendars: ${state.calendars.length}`);
+    eventSource.emit('ephemeris-state-changed');
 }
 
 
-export function getActiveCalendars() {
+
+export function getChatCalendars() {
     return state.calendars;
 }
 

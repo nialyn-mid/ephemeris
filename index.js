@@ -8,9 +8,11 @@ async function init() {
     logger.info('Initializing Ephemeris extension... (v1.1 - 2026-05-09-2319)');
 
     // 1. Load settings (Global)
+    logger.debug('Init: Loading settings...');
     loadSettings();
 
     // 2. Load current chat state (Per-Chat)
+    logger.debug('Init: Loading chat state...');
     loadChatState();
 
     // 3. Register AI tools
