@@ -11,7 +11,7 @@ export function registerGetTimeTool() {
     const { registerFunctionTool } = getContext();
 
     registerFunctionTool({
-        name: 'ephemeris_get_time',
+        name: 'eph_get_time',
         displayName: 'Ephemeris: Get Time',
         description: 'Gets the world time in specified calendar formats. If inputTime and sourceCalendarId are provided, converts that time to the requested calendars. Otherwise, returns the current world time.',
         parameters: {

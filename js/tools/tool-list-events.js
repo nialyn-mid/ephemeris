@@ -8,12 +8,12 @@ import { RejectedCallError } from '../errors.js';
 
 import { calendarIdSchema, timeObjectSchema, significanceSchema } from './schema.js';
 
-export function registerGetTimelineTool() {
+export function registerListEventsTool() {
     const { registerFunctionTool } = getContext();
 
     registerFunctionTool({
-        name: 'ephemeris_get_timeline',
-        displayName: 'Ephemeris: Get Timeline',
+        name: 'eph_list_events',
+        displayName: 'Ephemeris: List Events',
         description: 'Retrieves a list of events in a specified time window, formatted in a specific calendar.',
         parameters: {
             type: 'object',
@@ -50,11 +50,12 @@ export function registerGetTimelineTool() {
                 const eTimeObj = convertToTimeObject(e.baseTime, cal);
                 const timeStr = formatTimeObject(eTimeObj, cal);
                 return {
+                    id: e.id,
                     time: timeStr,
                     label: e.label,
                     significance: e.significance,
                     description: e.description,
-                    id: e.id,
+                    tags: e.tags,
                     baseTime: e.baseTime
                 };
             });

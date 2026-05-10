@@ -10,7 +10,7 @@ export function registerUpdateTimeTool() {
     const { registerFunctionTool } = getContext();
 
     registerFunctionTool({
-        name: 'ephemeris_update_time',
+        name: 'eph_update_time',
         displayName: 'Ephemeris: Update Time',
         description: 'Updates the current world time, either by setting an absolute time or applying a relative delta. You may specify any input calendar for the given time values.',
         parameters: {

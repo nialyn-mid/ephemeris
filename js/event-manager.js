@@ -30,6 +30,22 @@ export function addEvent(eventData) {
     return newEvent.id;
 }
 
+export function updateEvent(id, eventData) {
+    const index = state.events.findIndex(e => e.id === id);
+    if (index === -1) return null;
+    
+    state.events[index] = {
+        ...state.events[index],
+        ...eventData
+    };
+    
+    // Re-sort in case time changed
+    state.events.sort((a, b) => a.baseTime - b.baseTime);
+    saveChatState();
+    logger.info(`Event updated: ${state.events[index].label} (ID: ${id})`);
+    return state.events[index];
+}
+
 export function getEventsInRange(startTime, endTime) {
     return state.events.filter(e => e.baseTime >= startTime && e.baseTime <= endTime);
 }

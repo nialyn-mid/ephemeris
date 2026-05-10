@@ -19,7 +19,7 @@ Supported Unit Types:
 Tip: Use 'baseTemplate': 'gregorian' to inherit the standard structure and only override what you need.`;
 
     registerFunctionTool({
-        name: 'ephemeris_update_calendar',
+        name: 'eph_update_calendar',
         displayName: 'Ephemeris: Update Calendar',
         description: calendarDescription,
         parameters: {

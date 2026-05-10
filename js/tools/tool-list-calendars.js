@@ -7,7 +7,7 @@ export function registerListCalendarsTool() {
     const { registerFunctionTool } = getContext();
 
     registerFunctionTool({
-        name: 'ephemeris_list_calendars',
+        name: 'eph_list_calendars',
         displayName: 'Ephemeris: List Calendars',
         description: 'Lists all configured calendar systems for the current chat.',
         parameters: {
