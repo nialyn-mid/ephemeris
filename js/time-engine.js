@@ -104,8 +104,8 @@ export function formatTimeObject(timeObject, calendar) {
     const parts = [];
     for (const unit of calendar.units) {
         if (timeObject[unit.name] !== undefined) {
-            parts.push(`${timeObject[unit.name]}`);
+            parts.push(`${unit.name}: ${timeObject[unit.name]}`);
         }
     }
-    return parts.join(' ');
+    return parts.join(', ');
 }

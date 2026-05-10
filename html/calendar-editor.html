@@ -7,8 +7,11 @@
     </div>
 
     <div class="ephemeris-calendar-editor-container" style="display: flex; flex-direction: column; flex: 1;">
+        <label>Calendar Notes (For LLM Context):</label>
+        <textarea id="ephemeris-calendar-notes" class="text_pole" rows="3" style="width: 100%; margin-top: 5px; margin-bottom: 15px;" placeholder="Optional narrative context, cultural details, etc."></textarea>
+        
         <label>JSON Definition:</label>
-        <textarea id="ephemeris-calendar-json" class="text_pole" rows="25" style="width: 100%; font-family: monospace; margin-top: 5px; flex: 1; min-height: 400px;"></textarea>
+        <textarea id="ephemeris-calendar-json" class="text_pole" rows="20" style="width: 100%; font-family: monospace; margin-top: 5px; flex: 1; min-height: 300px;"></textarea>
         <div id="ephemeris-calendar-json-error" style="color: var(--red); display: none; margin-top: 5px;">Invalid JSON format.</div>
     </div>
 </div>

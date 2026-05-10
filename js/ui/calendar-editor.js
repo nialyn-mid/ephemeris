@@ -52,12 +52,32 @@ function bindPopupEvents(dlg) {
     const $json = $dlg.find('#ephemeris-calendar-json');
     const $error = $dlg.find('#ephemeris-calendar-json-error');
 
+    const $notes = $dlg.find('#ephemeris-calendar-notes');
+
     $select.on('change', () => {
         const id = $select.val();
         const cal = currentCalendars.find(c => c.id === id);
         if (cal) {
             $json.val(JSON.stringify(cal, null, 2));
+            $notes.val(cal.notes || '');
             $error.hide();
+        }
+    });
+
+    $dlg.on('input change', '#ephemeris-calendar-notes', () => {
+        const id = $select.val();
+        const index = currentCalendars.findIndex(c => c.id === id);
+        if (index >= 0) {
+            currentCalendars[index].notes = $notes.val();
+            $json.val(JSON.stringify(currentCalendars[index], null, 2));
+            
+            if (popupMode === 'global') {
+                settings.globalCalendars = currentCalendars;
+                saveSettings();
+            } else {
+                state.calendars = currentCalendars;
+                saveChatState();
+            }
         }
     });
 
@@ -67,6 +87,9 @@ function bindPopupEvents(dlg) {
             const index = currentCalendars.findIndex(c => c.id === parsed.id);
             if (index >= 0) {
                 currentCalendars[index] = parsed;
+                if ($notes.val() !== (parsed.notes || '')) {
+                    $notes.val(parsed.notes || '');
+                }
             } else {
                 currentCalendars.push(parsed);
             }

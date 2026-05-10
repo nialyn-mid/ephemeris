@@ -191,5 +191,8 @@ async function buildInjectionText() {
         }
     }
 
+    lines.push('');
+    lines.push(`*Note: You can use the \`ephemeris-get-time\` tool to check for updates or \`ephemeris-add-event\` to mark future occurrences.*`);
+
     return `<ephemeris_context>\n<!-- ${CONTEXT_MARKER} -->\n${lines.join('\n')}\n</ephemeris_context>`;
 }

@@ -30,30 +30,78 @@ export function getCalendar(id) {
     return calendars.find(c => c.id === id) || null;
 }
 
+function getSubUnitDescription(lengthInSeconds, currentUnitName, allUnits) {
+    if (!lengthInSeconds || lengthInSeconds <= 0) return `${lengthInSeconds}s`;
+
+    const candidates = allUnits.filter(u => 
+        u.type === 'number' && 
+        u.name !== currentUnitName && 
+        u.lengthInBase && 
+        u.lengthInBase <= lengthInSeconds
+    );
+
+    let bestSubUnit = null;
+    let bestCount = 0;
+    let isApprox = false;
+
+    for (const sub of candidates) {
+        if (lengthInSeconds % sub.lengthInBase === 0) {
+            const currentBestLen = bestSubUnit ? allUnits.find(u=>u.name===bestSubUnit).lengthInBase : 0;
+            if (!bestSubUnit || sub.lengthInBase > currentBestLen) {
+                bestSubUnit = sub.name;
+                bestCount = lengthInSeconds / sub.lengthInBase;
+                isApprox = false;
+            }
+        } else if (!bestSubUnit && lengthInSeconds > sub.lengthInBase) {
+            bestSubUnit = sub.name;
+            bestCount = Math.floor(lengthInSeconds / sub.lengthInBase);
+            isApprox = true;
+        }
+    }
+
+    if (bestSubUnit) {
+        const prefix = isApprox ? '~' : '';
+        const plural = bestCount === 1 ? '' : 's';
+        return `${lengthInSeconds.toLocaleString()}s (${prefix}${bestCount} ${bestSubUnit}${plural})`;
+    }
+
+    return `${lengthInSeconds.toLocaleString()}s`;
+}
+
 export function formatCalendarDetails(cal) {
     if (!cal) return '';
-    let details = `- ${cal.displayName} (${cal.id})`;
+    let details = `### ${cal.displayName}`;
     if (cal.abbreviation) details += ` [Abbr: ${cal.abbreviation}]`;
-    details += `\n  Epoch Offset: ${cal.epochOffset || 0}s, Speed: ${cal.conversionFactor || 1.0}x`;
-    details += `\n  Units:`;
+    details += `\nThis system uses the following hierarchical structure:`;
     
     if (cal.units && cal.units.length > 0) {
         cal.units.forEach(u => {
-            let typeInfo = `Type: ${u.type || 'number'}`;
+            let desc = '';
             if (u.type === 'variable' && Array.isArray(u.values)) {
-                typeInfo += `, Values: ${u.values.map(v => `${v.name} (${v.lengthInBase}s)`).join(', ')}`;
+                const seq = u.values.map(v => `${v.name} (${getSubUnitDescription(v.lengthInBase, u.name, cal.units)})`).join(', ');
+                desc = `Variable length. Sequence: ${seq}`;
             } else if (u.type === 'cyclic' && Array.isArray(u.values)) {
-                typeInfo += `, Offset: ${u.offset || 0}, Cycle: [${u.values.join(', ')}]`;
+                const valCount = u.values.length;
+                let alias = 'step';
+                const match = cal.units.find(sub => sub.type === 'number' && sub.lengthInBase === u.lengthInBase && sub.name !== u.name);
+                if (match) alias = match.name;
+                
+                desc = `${valCount}-${alias} cycle: [${u.values.join(', ')}]`;
             } else if (u.type === 'string' && Array.isArray(u.values)) {
-                typeInfo += `, Values: [${u.values.join(', ')}]`;
+                desc = `String values: [${u.values.join(', ')}] (${getSubUnitDescription(u.lengthInBase, u.name, cal.units)} per step)`;
             } else {
-                typeInfo += `, Length: ${u.lengthInBase}s`;
+                desc = `${getSubUnitDescription(u.lengthInBase, u.name, cal.units)}`;
+                if (u.startAtOne) desc += `. 1-indexed`;
             }
-            if (u.startAtOne) typeInfo += `, 1-Indexed`;
-            details += `\n    * ${u.name}: ${typeInfo}`;
+            details += `\n- **${u.name}**: ${desc}`;
         });
     } else {
-        details += ` None`;
+        details += `\n- None`;
     }
+
+    if (cal.notes && cal.notes.trim()) {
+        details += `\n\n**Calendar Notes:**\n${cal.notes.trim()}`;
+    }
+
     return details;
 }
