@@ -5,6 +5,8 @@ import { convertToBaseTime, convertToTimeObject, formatTimeObject } from '../tim
 import { getEventsInRange } from '../event-manager.js';
 import { state } from '../state.js';
 
+import { calendarIdSchema, timeObjectSchema, significanceSchema } from './schema.js';
+
 export function registerGetTimelineTool() {
     const { registerFunctionTool } = getContext();
 
@@ -15,11 +17,11 @@ export function registerGetTimelineTool() {
         parameters: {
             type: 'object',
             properties: {
-                calendarId: { type: 'string', description: 'Calendar ID to format output times in' },
-                centerTimeObject: { type: 'object', description: 'The central time to look around. If omitted, uses current time.' },
+                calendarId: calendarIdSchema('Calendar ID to format output times in.'),
+                centerTimeObject: timeObjectSchema('The central time to look around. If omitted, uses current time.'),
                 rangeBackwardSeconds: { type: 'number', description: 'How far back to look in seconds (base time units)' },
                 rangeForwardSeconds: { type: 'number', description: 'How far forward to look in seconds (base time units)' },
-                minSignificance: { type: 'number', description: 'Filter events by minimum significance (1-10)' }
+                minSignificance: significanceSchema('Filter events by minimum significance (1-10)')
             },
             required: ['calendarId', 'rangeBackwardSeconds', 'rangeForwardSeconds'],
         },

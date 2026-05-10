@@ -50,7 +50,7 @@ export function initPromptInjection() {
     eventSource.on('polyceph-task-finished', async (data) => {
         if (pendingTaskConsumption && data.taskId === pendingTaskConsumption && data.success) {
             logger.info(`Polyceph task ${data.taskId} completed successfully. Consuming Ephemeris context.`);
-            
+
             const freq = settings.injection.injectCalendarDetailsFrequency;
             if (freq === 'turn') {
                 detailsConsumedInTurn = true;
@@ -58,12 +58,12 @@ export function initPromptInjection() {
                 state.detailsConsumedInChat = true;
                 saveChatState();
             }
-            
+
             pendingTaskConsumption = null;
             await updateExtensionPrompt();
         }
     });
-    
+
     update();
 }
 
@@ -76,9 +76,9 @@ async function updateExtensionPrompt() {
 
     const context = getContext();
     const { setExtensionPrompt } = context;
-    
+
     const injectionText = await buildInjectionText();
-    
+
     if (injectionText) {
         await setExtensionPrompt(
             MODULE_NAME,
@@ -96,7 +96,7 @@ async function updateExtensionPrompt() {
 async function buildInjectionText() {
     const lines = [];
     const calendars = getActiveCalendars();
-    
+
     if (calendars.length === 0) return null; // No calendars active
 
     // 1. Current Time
@@ -133,16 +133,16 @@ async function buildInjectionText() {
     }
 
     if (settings.injection.injectCalendarDetails && settings.injection.injectCalendarDetails !== 'none' && !shouldSkipDetails) {
-        const { formatCalendarDetails } = await import('./calendar-manager.js');
+        const { formatCalendarDetails } = await import('./formatter.js');
         lines.push(`\n## Calendar Systems`);
-        
+
         let targetCalendars = calendars;
         if (settings.injection.injectCalendarDetails === 'chat') {
             targetCalendars = calendars.filter(c => state.calendars.find(sc => sc.id === c.id));
         } else if (settings.injection.injectCalendarDetails === 'global') {
             targetCalendars = calendars.filter(c => settings.globalCalendars.find(gc => gc.id === c.id));
         }
-        
+
         for (const cal of targetCalendars) {
             lines.push(formatCalendarDetails(cal));
         }
@@ -152,15 +152,15 @@ async function buildInjectionText() {
     if (settings.injection.injectEvents) {
         const upcoming = getUpcomingEvents(state.currentTime, settings.injection.timeRangeForward);
         const past = getPastEvents(state.currentTime, settings.injection.timeRangeBackward);
-        
+
         const relevantEvents = [...past, ...upcoming].sort((a, b) => a.baseTime - b.baseTime);
 
         if (relevantEvents.length > 0) {
             lines.push(`\n## Chronicle & Reminders`);
-            
+
             for (const event of relevantEvents) {
                 const timeDiff = event.baseTime - state.currentTime;
-                
+
                 // Summarization check: if it's far away and low significance, maybe skip?
                 // "Summarization Strategy": 'significant' only shows events >= 5 if they are further than 1 day away
                 if (settings.injection.summarizationStrategy === 'significant') {
@@ -172,7 +172,7 @@ async function buildInjectionText() {
 
                 const eTimeObj = convertToTimeObject(event.baseTime, primaryCal);
                 const timeStr = formatTimeObject(eTimeObj, primaryCal);
-                
+
                 const sigMult = 1 + ((event.significance || 1) - 1) * (settings.injection.significanceMultiplier || 0);
                 const effectiveReminderDist = settings.injection.remindersDistance * sigMult;
                 const effectiveNoticeDist = settings.injection.completedNoticesDuration * sigMult;
@@ -191,8 +191,6 @@ async function buildInjectionText() {
         }
     }
 
-    lines.push('');
-    lines.push(`*Note: You can use the \`ephemeris-get-time\` tool to check for updates or \`ephemeris-add-event\` to mark future occurrences.*`);
 
     return `<ephemeris_context>\n<!-- ${CONTEXT_MARKER} -->\n${lines.join('\n')}\n</ephemeris_context>`;
 }

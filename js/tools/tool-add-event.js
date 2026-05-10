@@ -7,6 +7,8 @@ import { settings } from '../settings.js';
 import { getActiveCalendars } from '../calendar-manager.js';
 import { formatDuration } from '../ui/time-preview.js';
 
+import { calendarIdSchema, timeObjectSchema, significanceSchema } from './schema.js';
+
 export function registerAddEventTool() {
     const { registerFunctionTool } = getContext();
 
@@ -14,7 +16,7 @@ export function registerAddEventTool() {
     const primaryCal = calendars[0] || { units: [{ name: 'second', lengthInBase: 1 }] };
     const s = settings.injection.significanceDistances;
 
-    const sigDescription = `Importance rating (1-10). Determines how far from the event time it's important to know about it'. ` +
+    const sigDescription = `Importance rating (1-10). Determines how far from the event time it's important to know about it. ` +
         `Current thresholds: Sig 1 (${formatDuration(s[1], primaryCal)}), ` +
         `Sig 5 (${formatDuration(s[5], primaryCal)}), ` +
         `Sig 10 (${s[10] >= 31536000000 ? 'Permanent' : formatDuration(s[10], primaryCal)}).`;
@@ -26,16 +28,11 @@ export function registerAddEventTool() {
         parameters: {
             type: 'object',
             properties: {
-                calendarId: { type: 'string', description: 'The ID of the calendar used for the timeObject' },
-                timeObject: { type: 'object', description: 'The time of the event' },
+                calendarId: calendarIdSchema(),
+                timeObject: timeObjectSchema(),
                 label: { type: 'string', description: 'Short name of the event' },
                 description: { type: 'string', description: 'Detailed description' },
-                significance: {
-                    type: 'number',
-                    minimum: 1,
-                    maximum: 10,
-                    description: sigDescription
-                },
+                significance: significanceSchema(sigDescription),
                 tags: { type: 'array', items: { type: 'string' } },
             },
             required: ['calendarId', 'timeObject', 'label'],

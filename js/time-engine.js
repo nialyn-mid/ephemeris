@@ -32,10 +32,11 @@ export function convertToBaseTime(timeObject, calendar) {
             } else {
                 val = Number(val);
                 if (isNaN(val)) val = 0;
-                // Adjust if the unit is 1-indexed (e.g., Day 1 means 0 offset)
-                if (unit.startAtOne) {
-                    val -= 1;
-                }
+                
+                // Adjust for starting values (e.g. Year 1970) and indexing
+                let startOffset = unit.startValue !== undefined ? unit.startValue : (unit.startAtOne ? 1 : 0);
+                
+                val -= startOffset;
                 baseTime += val * (unit.lengthInBase || 0);
             }
         }
@@ -88,9 +89,9 @@ export function convertToTimeObject(baseTime, calendar) {
             const index = val >= 0 ? val % unit.values.length : 0; 
             timeObject[unit.name] = unit.values[index];
         } else {
-            if (unit.startAtOne) {
-                val += 1;
-            }
+            let startOffset = unit.startValue !== undefined ? unit.startValue : (unit.startAtOne ? 1 : 0);
+            
+            val += startOffset;
             timeObject[unit.name] = val;
         }
     }

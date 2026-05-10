@@ -3,6 +3,7 @@ import { logger } from '../logger.js';
 import { state, saveChatState } from '../state.js';
 import { getCalendar } from '../calendar-manager.js';
 import { convertToBaseTime } from '../time-engine.js';
+import { calendarIdSchema, timeObjectSchema } from './schema.js';
 
 export function registerSetTimeTool() {
     const { registerFunctionTool } = getContext();
@@ -14,8 +15,8 @@ export function registerSetTimeTool() {
         parameters: {
             type: 'object',
             properties: {
-                calendarId: { type: 'string', description: 'The ID of the calendar the timeObject is formatted in' },
-                timeObject: { type: 'object', description: 'The structured time object (e.g. {"Year": 2024, "Month": "Jan"})' },
+                calendarId: calendarIdSchema(),
+                timeObject: timeObjectSchema(),
             },
             required: ['calendarId', 'timeObject'],
         },

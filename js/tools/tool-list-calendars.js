@@ -1,6 +1,7 @@
 import { getContext } from '/scripts/extensions.js';
 import { logger } from '../logger.js';
-import { getActiveCalendars, formatCalendarDetails } from '../calendar-manager.js';
+import { getActiveCalendars } from '../calendar-manager.js';
+import { formatCalendarDetails } from '../formatter.js';
 
 export function registerListCalendarsTool() {
     const { registerFunctionTool } = getContext();

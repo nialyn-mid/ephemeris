@@ -12,7 +12,7 @@ export const defaultSettings = {
             displayName: 'IRL International Standard',
             abbreviation: 'ISO 8601',
             units: [
-                { name: 'Year', type: 'number', lengthInBase: 31536000, startAtOne: false },
+                { name: 'Year', type: 'number', lengthInBase: 31536000, startValue: 1970 },
                 {
                     name: 'Month',
                     type: 'variable',
@@ -44,7 +44,8 @@ export const defaultSettings = {
                 { name: 'Second', type: 'number', lengthInBase: 1 }
             ],
             epochOffset: 0,
-            conversionFactor: 1.0
+            conversionFactor: 1.0,
+            notes: "The mathematical representation of this standard calendar approximates all years to exactly 365 days (ignoring leap years), and sets Epoch 0 to January 1, 1970. Hours are 24-hour format (0-23); you may suffix the first 12 hours as AM and suffix the last 12 hours - subtracting 12 - with PM for dialogue (e.g. the 13th hour in a day is 1 PM). You may also just state the hour in 24-hour format according to the preference of the user. Years follow ISO 8601 logic where Year 0 is 1 BCE, and Year -1 is 2 BCE."
         }
     ],
     // Injection settings
