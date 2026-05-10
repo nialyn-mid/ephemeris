@@ -31,7 +31,7 @@ export function registerListCalendarsTool() {
                 id: c.id,
                 displayName: c.displayName,
                 abbreviation: c.abbreviation,
-                unitNames: c.units.map(u => u.name),
+                units: c.units,
                 notes: c.notes,
                 conversionFactor: c.conversionFactor,
                 epochOffset: c.epochOffset

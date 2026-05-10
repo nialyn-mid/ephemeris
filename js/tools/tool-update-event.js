@@ -1,5 +1,6 @@
 import { getContext } from '/scripts/extensions.js';
 import { logger } from '../logger.js';
+import { state } from '../state.js';
 import { getCalendar } from '../calendar-manager.js';
 import { convertToBaseTime } from '../time-engine.js';
 import { addEvent, updateEvent } from '../event-manager.js';
@@ -33,9 +34,9 @@ export function registerUpdateEventTool() {
                 calendarId: calendarIdSchema(),
                 timeObject: timeObjectSchema('Time of the event. Required for new events.'),
                 label: { type: 'string', description: 'Short name. Required for new events.' },
-                description: { type: 'string', description: 'Detailed description' },
+                description: { type: 'string', description: 'Description in simple present tense.' },
                 significance: significanceSchema(sigDescription),
-                tags: { type: 'array', items: { type: 'string' }, description: 'Tags for filtering.' },
+                tags: { type: 'array', items: { type: 'string' }, description: 'Tags for filtering. E.g. [country name], "holiday", "personal"' },
             },
             required: ['calendarId'],
         },
@@ -66,7 +67,7 @@ export function registerUpdateEventTool() {
                 // Update mode
                 const oldEvent = JSON.parse(JSON.stringify(existing));
                 const updated = updateEvent(params.id, eventData);
-                
+
                 const { generateChangelog } = await import('../formatter.js');
                 const changes = generateChangelog(oldEvent, updated);
 
@@ -81,7 +82,7 @@ export function registerUpdateEventTool() {
             } else {
                 // Create mode
                 if (!params.label || !params.timeObject) {
-                    const msg = params.id 
+                    const msg = params.id
                         ? `Event ID '${params.id}' not found. To create a new event with this ID, both 'label' and 'timeObject' are required.`
                         : 'label and timeObject are required for new events.';
                     throw new RejectedCallError(msg);

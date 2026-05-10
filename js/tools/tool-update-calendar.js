@@ -10,7 +10,7 @@ import { lengthInSubUnitsSchema } from './schema.js';
  */
 function resolveLengths(units) {
     const resolved = new Map();
-    
+
     // Seed with explicitly defined lengths
     for (const unit of units) {
         if (unit.lengthInBase) {
@@ -33,7 +33,7 @@ function resolveLengths(units) {
             if (unit.lengthInSubUnits) {
                 const subUnitName = Object.keys(unit.lengthInSubUnits)[0];
                 const multiplier = unit.lengthInSubUnits[subUnitName];
-                
+
                 if (resolved.has(subUnitName)) {
                     unit.lengthInBase = resolved.get(subUnitName) * multiplier;
                     resolved.set(unit.name, unit.lengthInBase);
@@ -74,11 +74,11 @@ function resolveLengths(units) {
     // Final check for unresolvable units
     for (const unit of units) {
         if (unit.type !== 'string' && !unit.lengthInBase) {
-             // Strings are allowed to have 0/null length if they are purely descriptive, 
-             // but usually they follow a number unit.
-             if (unit.type === 'number' || unit.type === 'variable' || unit.type === 'cyclic') {
+            // Strings are allowed to have 0/null length if they are purely descriptive, 
+            // but usually they follow a number unit.
+            if (unit.type === 'number' || unit.type === 'variable' || unit.type === 'cyclic') {
                 throw new RejectedCallError(`Could not resolve length for unit '${unit.name}'. Ensure it provides 'lengthInBase' or a 'lengthInSubUnits' that references a known unit.`);
-             }
+            }
         }
     }
 }
@@ -91,11 +91,11 @@ If the calendar ID already exists, it will be patched with the provided fields.
 If it is a new ID, it will be created (requires displayName and units/baseTemplate).
 
 Supported Unit Types:
-- 'number': Basic division (e.g. Hour = 3600s).
-- 'variable': For units with varying lengths (e.g. Months). Provide 'values' as objects with lengths.
-- 'cyclic': For repeating cycles (e.g. Weekdays).
-
-Tip: You can define unit lengths relative to each other using 'lengthInSubUnits' (e.g. Day = 28 Hours) to avoid manual math.`;
+- 'number': Basic division (e.g. Hour = 3600s). Use startAtOne: true for 1-indexed (e.g. Day 1). Use startValue (e.g. 1970) for timeline anchoring.
+- 'variable': For units with varying lengths (e.g. Months). Provide 'values' as an array of objects: [{"name": "Jan", "lengthInBase": 2678400}, ...]
+- 'cyclic': For repeating cycles (e.g. Weekdays). Provide 'values' as strings and an optional 'offset'.
+Tip: You can define unit lengths relative to each other using 'lengthInSubUnits' (e.g. Day = 28 Hours) to avoid long number math.
+Tip: Use 'baseTemplate': [calendar_id] to inherit a defined calendar structure and only override what you need.`;
 
     registerFunctionTool({
         name: 'eph_update_calendar',
@@ -107,18 +107,18 @@ Tip: You can define unit lengths relative to each other using 'lengthInSubUnits'
                 id: { type: 'string', description: 'Unique identifier without spaces' },
                 displayName: { type: 'string', description: 'Human-readable name. Required for new calendars.' },
                 baseTemplate: { type: 'string', description: 'ID of an existing calendar to copy units/settings from (e.g., "gregorian")' },
-                units: { 
-                    type: 'array', 
+                units: {
+                    type: 'array',
                     description: 'Ordered array of units from largest to smallest. Overrides template if provided.',
-                    items: { 
+                    items: {
                         type: 'object',
                         properties: {
                             name: { type: 'string' },
                             type: { type: 'string', enum: ['number', 'string', 'variable', 'cyclic'] },
                             lengthInBase: { type: 'number', description: 'Length of this unit in base time seconds. Use for smallest units.' },
                             lengthInSubUnits: lengthInSubUnitsSchema(),
-                            values: { 
-                                type: 'array', 
+                            values: {
+                                type: 'array',
                                 description: 'Array of strings (for cyclic) or objects with {name, lengthInBase/lengthInSubUnits} (for variable)',
                                 items: {
                                     anyOf: [
@@ -136,11 +136,11 @@ Tip: You can define unit lengths relative to each other using 'lengthInSubUnits'
                                 }
                             },
                             offset: { type: 'number', description: 'For cyclic types: shift the starting index' },
-                            startAtOne: { type: 'boolean', description: 'True if unit is 1-indexed (like Day 1)'},
+                            startAtOne: { type: 'boolean', description: 'True if unit is 1-indexed (like Day 1)' },
                             startValue: { type: 'number', description: 'Initial value at Epoch 0 (e.g. 1970 for years).' }
                         },
                         required: ['name', 'type']
-                    } 
+                    }
                 },
                 epochOffset: { type: 'number', description: 'Offset from base time 0' },
                 conversionFactor: { type: 'number', description: 'Speed relative to base time (default 1.0)' },
@@ -195,7 +195,7 @@ Tip: You can define unit lengths relative to each other using 'lengthInSubUnits'
             }
 
             saveChatState();
-            
+
             const { generateChangelog } = await import('../formatter.js');
             const changes = isNew ? [] : generateChangelog(oldCalendar, targetCalendar);
 

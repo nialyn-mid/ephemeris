@@ -18,7 +18,7 @@ export function registerUpdateTimeTool() {
             properties: {
                 calendarId: calendarIdSchema(),
                 timeObject: timeObjectSchema('Absolute time to set. If omitted, applies timeDelta to current time.'),
-                timeDelta: timeDeltaSchema('Negative numbers decrement.')
+                timeDelta: timeDeltaSchema('Use to adjust time. Negative numbers decrement.')
             },
             required: ['calendarId'],
         },
@@ -60,7 +60,7 @@ export function registerUpdateTimeTool() {
             return JSON.stringify({
                 status: 'ok',
                 error: false,
-                message: `Time updated from [${oldTimeStr}] to [${newTimeStr}]`,
+                message: `Time updated from [oldTime] to [newTime]`,
                 oldTime: oldTimeObj,
                 newTime: newTimeObj,
                 baseTime: targetBaseTime
