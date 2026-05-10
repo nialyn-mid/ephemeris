@@ -19,27 +19,32 @@ export function registerListCalendarsTool() {
         action: async (params) => {
             const calendars = getActiveCalendars();
             if (calendars.length === 0) {
-                return 'No calendars defined.';
+                return JSON.stringify({
+                    status: 'ok',
+                    error: false,
+                    message: 'No calendars defined.',
+                    calendars: []
+                });
             }
 
+            const schemas = calendars.map(c => ({
+                id: c.id,
+                displayName: c.displayName,
+                abbreviation: c.abbreviation,
+                unitNames: c.units.map(u => u.name)
+            }));
+
+            let details = undefined;
             if (params.includeDetails) {
-                return calendars.map(c => formatCalendarDetails(c)).join('\n\n');
+                details = calendars.map(c => formatCalendarDetails(c)).join('\n\n');
             }
 
-            // Provide a clean view of the calendar schemas
-            const schemas = calendars.map(c => {
-                return {
-                    id: c.id,
-                    displayName: c.displayName,
-                    units: c.units.map(u => ({
-                        name: u.name,
-                        type: u.type,
-                        ...(u.values ? { values: u.values } : {})
-                    }))
-                };
-            });
-
-            return JSON.stringify(schemas, null, 2);
+            return JSON.stringify({
+                status: 'ok',
+                error: false,
+                calendars: schemas,
+                details: details
+            }, null, 2);
         },
     });
 }

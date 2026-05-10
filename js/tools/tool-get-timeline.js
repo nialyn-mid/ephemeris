@@ -4,6 +4,7 @@ import { getCalendar } from '../calendar-manager.js';
 import { convertToBaseTime, convertToTimeObject, formatTimeObject } from '../time-engine.js';
 import { getEventsInRange } from '../event-manager.js';
 import { state } from '../state.js';
+import { RejectedCallError } from '../errors.js';
 
 import { calendarIdSchema, timeObjectSchema, significanceSchema } from './schema.js';
 
@@ -28,12 +29,11 @@ export function registerGetTimelineTool() {
         action: async (params) => {
             const cal = getCalendar(params.calendarId);
             if (!cal) {
-                return `Error: Calendar '${params.calendarId}' not found.`;
+                throw new RejectedCallError(`Calendar '${params.calendarId}' not found.`);
             }
 
             let centerTime = state.currentTime;
             if (params.centerTimeObject) {
-                // Determine center time from calendar of the same ID (assuming the input object matches the requested format)
                 centerTime = convertToBaseTime(params.centerTimeObject, cal);
             }
 
@@ -46,17 +46,25 @@ export function registerGetTimelineTool() {
                 events = events.filter(e => e.significance >= params.minSignificance);
             }
 
-            if (events.length === 0) {
-                return 'Timeline: No events found in this range.';
-            }
-
             const formattedEvents = events.map(e => {
                 const eTimeObj = convertToTimeObject(e.baseTime, cal);
                 const timeStr = formatTimeObject(eTimeObj, cal);
-                return `[${timeStr}] ${e.label} (Significance: ${e.significance}): ${e.description}`;
+                return {
+                    time: timeStr,
+                    label: e.label,
+                    significance: e.significance,
+                    description: e.description,
+                    id: e.id,
+                    baseTime: e.baseTime
+                };
             });
 
-            return `Timeline:\n${formattedEvents.join('\n')}`;
+            return JSON.stringify({
+                status: 'ok',
+                error: false,
+                message: events.length === 0 ? 'No events found in this range.' : `Found ${events.length} events.`,
+                events: formattedEvents
+            }, null, 2);
         },
     });
 }

@@ -46,6 +46,51 @@ export function convertToBaseTime(timeObject, calendar) {
     return Math.floor(baseTime / speed);
 }
 
+export function calculateDeltaSeconds(deltaObject, calendar) {
+    if (!calendar || !calendar.units) return 0;
+
+    let deltaSeconds = 0;
+
+    // Special bypass for raw seconds injection
+    if (deltaObject._baseSeconds !== undefined) {
+        let raw = Number(deltaObject._baseSeconds);
+        if (!isNaN(raw)) {
+            deltaSeconds += raw;
+        }
+    }
+    
+    for (const unit of calendar.units) {
+        if (unit.type === 'cyclic') continue;
+
+        if (deltaObject[unit.name] !== undefined) {
+            let val = Number(deltaObject[unit.name]);
+            if (isNaN(val)) continue;
+            
+            if (unit.type === 'variable' && Array.isArray(unit.values)) {
+                // For delta, we use the average length or the first few items.
+                // Simple approach: sum the first 'val' items if positive, or just use a standard year/month length.
+                // But since our variables are fixed lengths in settings, we can just sum them.
+                if (val > 0) {
+                    for (let i = 0; i < val; i++) {
+                        const v = unit.values[i % unit.values.length];
+                        deltaSeconds += v.lengthInBase || 0;
+                    }
+                } else if (val < 0) {
+                    for (let i = 0; i < Math.abs(val); i++) {
+                        const v = unit.values[(unit.values.length - 1 - i) % unit.values.length];
+                        deltaSeconds -= v.lengthInBase || 0;
+                    }
+                }
+            } else {
+                deltaSeconds += val * (unit.lengthInBase || 0);
+            }
+        }
+    }
+    
+    const speed = calendar.conversionFactor || 1.0;
+    return Math.floor(deltaSeconds / speed);
+}
+
 export function convertToTimeObject(baseTime, calendar) {
     if (!calendar || !calendar.units) return {};
 

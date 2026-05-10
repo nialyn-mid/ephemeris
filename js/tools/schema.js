@@ -5,7 +5,12 @@
 
 export const timeObjectSchema = (description) => ({
     type: 'object',
-    description: (description ? `${description} ` : '') + 'A structured time object where keys are unit names (e.g. {"Year": 2024, "Month": "January", "Day": 1}).'
+    description: (description ? `${description} ` : '') + 'A structured absolute time object where keys are unit names (e.g. {"Year": 2024, "Month": "January", "Day": 1}).'
+});
+
+export const timeDeltaSchema = (description) => ({
+    type: 'object',
+    description: (description ? `${description} ` : '') + 'A relative time duration as a structured object (e.g. {"Day": 3, "Hour": 12}). Use the calendar\'s unit names as keys. To bypass units and add raw base seconds directly, use the special key "_baseSeconds" (e.g. {"_baseSeconds": 3600}).'
 });
 
 export const calendarIdSchema = (description) => ({

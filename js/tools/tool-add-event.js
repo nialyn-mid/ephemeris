@@ -6,6 +6,7 @@ import { addEvent } from '../event-manager.js';
 import { settings } from '../settings.js';
 import { getActiveCalendars } from '../calendar-manager.js';
 import { formatDuration } from '../ui/time-preview.js';
+import { RejectedCallError } from '../errors.js';
 
 import { calendarIdSchema, timeObjectSchema, significanceSchema } from './schema.js';
 
@@ -33,14 +34,14 @@ export function registerAddEventTool() {
                 label: { type: 'string', description: 'Short name of the event' },
                 description: { type: 'string', description: 'Detailed description' },
                 significance: significanceSchema(sigDescription),
-                tags: { type: 'array', items: { type: 'string' } },
+                tags: { type: 'array', items: { type: 'string' }, description: 'Tags for filtering. e.g. [country name],"season","holiday","personal"' },
             },
             required: ['calendarId', 'timeObject', 'label'],
         },
         action: async (params) => {
             const cal = getCalendar(params.calendarId);
             if (!cal) {
-                return `Error: Calendar '${params.calendarId}' not found.`;
+                throw new RejectedCallError(`Calendar '${params.calendarId}' not found.`);
             }
 
             const baseTime = convertToBaseTime(params.timeObject, cal);
@@ -54,7 +55,13 @@ export function registerAddEventTool() {
                 tags: params.tags || []
             });
 
-            return `Event "${params.label}" successfully scheduled.`;
+            return JSON.stringify({
+                status: 'ok',
+                error: false,
+                message: `Event "${params.label}" scheduled.`,
+                eventId: eventId,
+                baseTime: baseTime
+            });
         },
     });
 }
