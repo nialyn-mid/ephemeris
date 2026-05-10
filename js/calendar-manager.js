@@ -26,8 +26,10 @@ export function getActiveCalendars() {
 }
 
 export function getCalendar(id) {
+    if (!id) return null;
     const calendars = getActiveCalendars();
-    return calendars.find(c => c.id === id) || null;
+    const lowerId = id.toLowerCase();
+    return calendars.find(c => c.id.toLowerCase() === lowerId) || null;
 }
 
 export { formatCalendarDetails } from './formatter.js';

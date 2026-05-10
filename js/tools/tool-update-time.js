@@ -23,9 +23,13 @@ export function registerUpdateTimeTool() {
             required: ['calendarId'],
         },
         action: async (params) => {
-            const cal = getCalendar(params.calendarId);
+            const calId = params.calendarId || params.CalendarId || params.calendar_id;
+            const timeObj = params.timeObject || params.TimeObject;
+            const timeDelta = params.timeDelta || params.TimeDelta;
+
+            const cal = getCalendar(calId);
             if (!cal) {
-                throw new RejectedCallError(`Calendar '${params.calendarId}' not found.`);
+                throw new RejectedCallError(`Calendar '${calId}' not found.`);
             }
 
             const { calculateDeltaSeconds, convertToTimeObject, formatTimeObject } = await import('../time-engine.js');
@@ -33,12 +37,12 @@ export function registerUpdateTimeTool() {
             const oldTime = state.currentTime;
             let targetBaseTime = oldTime;
 
-            if (params.timeObject) {
-                targetBaseTime = convertToBaseTime(params.timeObject, cal);
+            if (timeObj) {
+                targetBaseTime = convertToBaseTime(timeObj, cal);
             }
 
-            if (params.timeDelta !== undefined) {
-                const delta = calculateDeltaSeconds(params.timeDelta, cal);
+            if (timeDelta !== undefined) {
+                const delta = calculateDeltaSeconds(timeDelta, cal);
                 targetBaseTime += delta;
             }
 

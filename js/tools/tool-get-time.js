@@ -32,22 +32,33 @@ export function registerGetTimeTool() {
             
             let targetBaseTime = state.currentTime;
 
-            if (params.inputTime && params.sourceCalendarId) {
-                const sourceCal = getCalendar(params.sourceCalendarId);
+            if (params.inputTime) {
+                const sourceId = params.sourceCalendarId || params.source_calendar_id;
+                const sourceCal = getCalendar(sourceId);
                 if (!sourceCal) {
-                    throw new RejectedCallError(`Source calendar '${params.sourceCalendarId}' not found.`);
+                    throw new RejectedCallError(`Source calendar '${sourceId}' not found. It is required when inputTime is provided.`);
                 }
                 targetBaseTime = convertToBaseTime(params.inputTime, sourceCal);
             }
 
             const results = {};
             const errors = [];
-            for (const id of params.calendarIds) {
-                const cal = getCalendar(id);
-                if (cal) {
-                    results[id] = convertToTimeObject(targetBaseTime, cal);
-                } else {
-                    errors.push(`Calendar ${id} not found.`);
+            const ids = params.calendarIds || [];
+            
+            if (ids.length === 0) {
+                // If no IDs provided, just use all active calendars
+                const active = getActiveCalendars();
+                for (const cal of active) {
+                    results[cal.id] = convertToTimeObject(targetBaseTime, cal);
+                }
+            } else {
+                for (const id of ids) {
+                    const cal = getCalendar(id);
+                    if (cal) {
+                        results[id] = convertToTimeObject(targetBaseTime, cal);
+                    } else {
+                        errors.push(`Calendar ${id} not found.`);
+                    }
                 }
             }
 

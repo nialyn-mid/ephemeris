@@ -101,7 +101,8 @@ export function convertToTimeObject(baseTime, calendar) {
     
     // Iterate from largest unit to smallest. Assumes units array is correctly ordered.
     for (const unit of calendar.units) {
-        if (!unit.lengthInBase || unit.lengthInBase <= 0) continue;
+        const isVariable = unit.type === 'variable' && Array.isArray(unit.values);
+        if (!isVariable && (!unit.lengthInBase || unit.lengthInBase <= 0)) continue;
         
         if (unit.type === 'cyclic' && Array.isArray(unit.values)) {
             let cycles = Math.floor(totalTime / unit.lengthInBase);
