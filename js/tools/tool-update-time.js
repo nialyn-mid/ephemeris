@@ -18,7 +18,8 @@ export function registerUpdateTimeTool() {
             properties: {
                 calendarId: calendarIdSchema(),
                 timeObject: timeObjectSchema('Absolute time to set. If omitted, applies timeDelta to current time.'),
-                timeDelta: timeDeltaSchema('Use to adjust time. Negative numbers decrement.')
+                timeDelta: timeDeltaSchema('Use to adjust time. Negative numbers decrement.'),
+                responseCalendarId: calendarIdSchema('Optional: Request a post-change time response in an additional calendar.')
             },
             required: ['calendarId'],
         },
@@ -26,6 +27,7 @@ export function registerUpdateTimeTool() {
             const calId = params.calendarId || params.CalendarId || params.calendar_id;
             const timeObj = params.timeObject || params.TimeObject;
             const timeDelta = params.timeDelta || params.TimeDelta;
+            const respCalId = params.responseCalendarId || params.response_calendar_id;
 
             const cal = getCalendar(calId);
             if (!cal) {
@@ -55,6 +57,19 @@ export function registerUpdateTimeTool() {
             const oldTimeStr = formatTimeObject(oldTimeObj, cal);
             const newTimeStr = formatTimeObject(newTimeObj, cal);
 
+            let responseCalendarTime = undefined;
+            if (respCalId) {
+                const respCal = getCalendar(respCalId);
+                if (respCal) {
+                    responseCalendarTime = {
+                        calendarId: respCal.id,
+                        displayName: respCal.displayName,
+                        time: convertToTimeObject(targetBaseTime, respCal),
+                        timeStr: formatTimeObject(convertToTimeObject(targetBaseTime, respCal), respCal)
+                    };
+                }
+            }
+
             logger.info(`Time updated from ${oldTime} to ${targetBaseTime}`);
 
             return JSON.stringify({
@@ -63,8 +78,10 @@ export function registerUpdateTimeTool() {
                 message: `Time updated from [oldTime] to [newTime]`,
                 oldTime: oldTimeObj,
                 newTime: newTimeObj,
-                baseTime: targetBaseTime
+                baseTime: targetBaseTime,
+                responseCalendarTime: responseCalendarTime
             }, null, 2);
         },
+
     });
 }
