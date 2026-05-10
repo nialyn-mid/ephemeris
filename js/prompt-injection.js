@@ -142,7 +142,7 @@ async function buildInjectionText() {
 
     if (settings.injection.injectCalendarDetails && settings.injection.injectCalendarDetails !== 'none' && !shouldSkipDetails) {
         const { formatCalendarDetails } = await import('./formatter.js');
-        lines.push(`\n## Calendar Systems`);
+        lines.push(`\n## Available Calendar Systems`);
 
         let targetCalendars = calendars;
         if (settings.injection.injectCalendarDetails === 'chat') {

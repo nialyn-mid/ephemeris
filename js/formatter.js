@@ -52,7 +52,7 @@ function getSubUnitDescription(lengthInSeconds, currentUnitName, allUnits) {
  */
 export function formatCalendarDetails(cal) {
     if (!cal) return '';
-    let details = `### ${cal.displayName}`;
+    let details = `### ${cal.displayName} [ID: ${cal.id}]`;
     if (cal.abbreviation) details += ` [Abbr: ${cal.abbreviation}]`;
     details += `\nThis system uses the following hierarchical structure:`;
 
