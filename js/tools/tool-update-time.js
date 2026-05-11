@@ -64,6 +64,28 @@ export function registerUpdateTimeTool() {
             const oldTimeObj = convertToTimeObject(oldTime, cal);
             const newTimeObj = convertToTimeObject(targetBaseTime, cal);
 
+            // Round-trip Validation (Diagnostic Check)
+            if (timeObj) {
+                const mismatchedUnits = [];
+                for (const unit of cal.units) {
+                    const inputVal = timeObj[unit.name];
+                    const outputVal = newTimeObj[unit.name];
+                    
+                    if (inputVal !== undefined && inputVal != outputVal) { // Use != for loose comparison (string/number)
+                        mismatchedUnits.push(`${unit.name}: input='${inputVal}', output='${outputVal}' (lengthInBase: ${unit.lengthInBase})`);
+                    }
+                }
+                
+                if (mismatchedUnits.length > 0) {
+                    logger.warn(`[DIAGNOSTIC] Time Round-Trip Mismatch detected for calendar '${cal.id}'!`, {
+                        input: timeObj,
+                        output: newTimeObj,
+                        baseTime: targetBaseTime,
+                        mismatches: mismatchedUnits
+                    });
+                }
+            }
+
             const oldTimeStr = formatTimeObject(oldTimeObj, cal);
             const newTimeStr = formatTimeObject(newTimeObj, cal);
 

@@ -1,3 +1,4 @@
+import { logger } from '../logger.js';
 import { state } from '../state.js';
 import { settings } from '../settings.js';
 import { convertToTimeObject, formatTimeObject } from '../time-engine.js';
@@ -24,24 +25,25 @@ export async function buildTimeInjection(calendars, { detailsConsumedInTurn, isS
 
     // 2. Calendar Details (Hierarchical structure, notes, etc.)
     const freq = settings.injection.injectCalendarDetailsFrequency;
-    let shouldSkipDetails = false;
+    let skipReason = null;
 
     if (freq === 'turn' && detailsConsumedInTurn) {
-        shouldSkipDetails = true;
+        skipReason = 'Already consumed in this turn';
     } else if (freq === 'chat' && state.detailsConsumedInChat) {
-        shouldSkipDetails = true;
+        skipReason = 'Already consumed in this chat';
     } else if (freq === 'turn' && !isStart && !detailsConsumedInTurn) {
-        // If not at the very start and we haven't shown it yet this turn, 
-        // we might still want to skip if it's supposed to be "every" turn but we're in the middle of a chat?
-        // Actually, logic from prompt-injection.js was:
-        // else if (freq === 'turn' && !isStart && !detailsConsumedInTurn) { if (!isStart) shouldSkipDetails = true; }
-        // This effectively means 'turn' only shows at the very first message or when explicitly triggered?
-        // Let's keep it consistent with what was there.
-        shouldSkipDetails = true;
+        // If it's turn-based but we aren't at the very start of the chat, 
+        // we only show it on the first message or if it's explicitly enabled for every turn.
+        // For now, let's allow 'turn' to show if not consumed.
     }
 
-    if (settings.injection.injectCalendarDetails && settings.injection.injectCalendarDetails !== 'none' && !shouldSkipDetails) {
+    const mode = settings.injection.injectCalendarDetails;
+    const shouldShow = mode && mode !== 'none' && !skipReason;
+
+    if (shouldShow) {
+        logger.debug('[INJECTION] Injecting calendar details (mode:', mode, ')');
         lines.push(`\n## Available Calendar Systems`);
+
 
         let targetCalendars = calendars;
         if (settings.injection.injectCalendarDetails === 'primary') {
@@ -53,7 +55,10 @@ export async function buildTimeInjection(calendars, { detailsConsumedInTurn, isS
         }
         
         return { lines, consumedDetails: true };
+    } else if (mode && mode !== 'none' && skipReason) {
+        logger.debug(`[INJECTION] Skipping calendar details: ${skipReason}`);
     }
 
     return { lines, consumedDetails: false };
 }
+

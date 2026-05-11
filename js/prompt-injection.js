@@ -21,7 +21,23 @@ let pendingTaskConsumption = null;
 export function initPromptInjection() {
     const update = () => updateExtensionPrompt();
 
-    eventSource.on(event_types.CHARACTER_MESSAGE_RENDERED, update);
+    eventSource.on(event_types.CHARACTER_MESSAGE_RENDERED, () => {
+        // Standard consumption for non-Polyceph environments
+        // We only consume if there is at least one user message (prevents greeting from consuming)
+        const chat = getContext().chat || [];
+        const hasUserMessage = chat.some(m => m.is_user && !m.is_system);
+
+        if (!pendingTaskConsumption && hasUserMessage) {
+            const freq = settings.injection.injectCalendarDetailsFrequency;
+            if (freq === 'turn') detailsConsumedInTurn = true;
+            if (freq === 'chat') {
+                state.detailsConsumedInChat = true;
+                saveChatState();
+            }
+        }
+        update();
+    });
+
     eventSource.on('ephemeris-state-changed', update);
     eventSource.on('ephemeris-settings-changed', update);
     eventSource.on(event_types.USER_MESSAGE_RENDERED, () => {
@@ -115,17 +131,11 @@ async function buildInjectionText() {
     const context = getContext();
     const chat = context.chat || [];
     const userMessages = chat.filter(m => m.is_user && !m.is_system);
-    const isStart = userMessages.length <= 1;
+    const isStart = userMessages.length <= 1 && !state.detailsConsumedInChat;
 
     // 1. Time & Calendar Details
     const { lines: timeLines, consumedDetails } = await buildTimeInjection(calendars, { detailsConsumedInTurn, isStart });
     logger.debug(`Time Injection: ${timeLines.length} lines generated.`);
-
-    if (consumedDetails) {
-        detailsConsumedInTurn = true;
-        state.detailsConsumedInChat = true;
-        saveChatState();
-    }
 
     // 2. Events (Reminders, Chronicle, Schedule)
     const eventLines = await buildEventInjection(calendars);

@@ -51,7 +51,7 @@ export const significanceSchema = (description) => ({
 
 export const lengthInSubUnitsSchema = () => ({
     type: 'object',
-    description: 'Define length of this unit relative to another, smaller unit. Example: {"Hour": 28} to define a Day as 28 Hours. The referenced unit must be defined in the same calendar.',
+    description: 'Define length of this unit in terms of another (importantly, smaller!) unit. Example: {"Hour": 28} to define a (larger) Day as 28 (smaller) Hours. The referenced unit must be defined in the same calendar.',
     additionalProperties: { type: 'number' }
 });
 
