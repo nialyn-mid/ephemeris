@@ -165,9 +165,9 @@ Tips:
                     }
                 },
                 epochOffset: { type: 'number', description: 'Offset from base time 0' },
-                conversionFactor: { type: 'number', description: 'Speed relative to base time (default 1.0)' },
-                notes: { type: 'string', description: 'Cultural context or narrative flavor for the LLM.' },
-                abbreviation: { type: 'string', description: 'Short label (e.g. ISO 8601)' }
+                conversionFactor: { type: 'number', description: 'Speed relative to base time (default 1.0). Keep it close to 1.0 unless you want some wild unit dissonance.' },
+                notes: { type: 'string', description: 'For stating inobvious time system quirks, cultural context, or narrative flavor.' },
+                abbreviation: { type: 'string', description: 'Short label (e.g. ISO 8601, ABC)' }
             },
             required: ['id'],
         },
