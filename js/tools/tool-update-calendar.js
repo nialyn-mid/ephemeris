@@ -3,7 +3,7 @@ import { logger } from '../logger.js';
 import { state, saveChatState } from '../state.js';
 import { getCalendar } from '../calendar-manager.js';
 import { RejectedCallError } from '../errors.js';
-import { lengthInSubUnitsSchema } from './schema.js';
+import { lengthInSubUnitsSchema } from './infra/schema.js';
 
 /**
  * Resolves relative unit lengths (lengthInSubUnits) into absolute base seconds (lengthInBase).
@@ -107,7 +107,7 @@ export function registerUpdateCalendarTool() {
 
     const calendarDescription = `Creates or updates a custom calendar system for the current chat. 
 If the calendar ID already exists, it will be patched with the provided fields. 
-If it is a new ID, it will be created (requires displayName and units/baseTemplate).
+If it is a new ID, it will be created (requires displayName, abbreviation, and units/baseTemplate).
 
 Supported Unit Types:
 - 'number': Basic division (e.g. Hour = 3600s). Use startAtOne: true for 1-indexed (e.g. Day 1). Use startValue (e.g. 1970) for timeline anchoring.
@@ -172,7 +172,7 @@ Tips:
             required: ['id'],
         },
         action: async (params) => {
-            const { provideDependency } = await import('./tool-queue.js');
+            const { provideDependency } = await import('./infra/tool-queue.js');
             try {
                 const existingIndex = state.calendars.findIndex(c => c.id === params.id);
                 const isNew = existingIndex === -1;
@@ -207,12 +207,15 @@ Tips:
 
                 // 5. Validation
                 if (isNew) {
-                    if (!targetCalendar.displayName) {
-                        throw new RejectedCallError('displayName is required for new calendars.');
-                    }
-                    if (!targetCalendar.units || targetCalendar.units.length === 0) {
-                        throw new RejectedCallError('units or a valid baseTemplate are required for new calendars.');
-                    }
+                    const { Validator } = await import('./infra/schema.js');
+                    const v = new Validator('Validation failed for new calendar');
+                    
+                    v.require(targetCalendar.displayName, 'displayName is required for new calendars');
+                    v.require(targetCalendar.abbreviation, 'abbreviation is required for new calendars');
+                    v.require(targetCalendar.units && targetCalendar.units.length > 0, 'units or a valid baseTemplate are required for new calendars');
+
+                    v.throwIfErrors();
+
                     state.calendars.push(targetCalendar);
                 } else {
                     state.calendars[existingIndex] = targetCalendar;

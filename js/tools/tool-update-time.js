@@ -4,7 +4,7 @@ import { state, saveChatState } from '../state.js';
 import { getCalendar } from '../calendar-manager.js';
 import { convertToBaseTime } from '../time-engine.js';
 import { RejectedCallError } from '../errors.js';
-import { calendarIdSchema, timeObjectSchema, timeDeltaSchema } from './schema.js';
+import { calendarIdSchema, timeObjectSchema, timeDeltaSchema } from './infra/schema.js';
 
 export function registerUpdateTimeTool() {
     const { registerFunctionTool } = getContext();
@@ -30,7 +30,7 @@ export function registerUpdateTimeTool() {
             const respCalId = params.responseCalendarId || params.response_calendar_id;
 
             const { calculateDeltaSeconds, convertToTimeObject, formatTimeObject } = await import('../time-engine.js');
-            const { waitForDependency } = await import('./tool-queue.js');
+            const { waitForDependency } = await import('./infra/tool-queue.js');
 
             await waitForDependency('calendar', calId);
 
@@ -38,6 +38,12 @@ export function registerUpdateTimeTool() {
             if (!cal) {
                 throw new RejectedCallError(`Calendar '${calId}' not found.`);
             }
+
+            const { Validator } = await import('./infra/schema.js');
+            const v = new Validator('Validation failed for time update');
+            v.require(timeObj || timeDelta !== undefined, 'Either timeObject (absolute) or timeDelta (relative) must be provided');
+            v.throwIfErrors();
+
 
             const oldTime = state.currentTime;
 

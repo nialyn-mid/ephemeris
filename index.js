@@ -1,7 +1,7 @@
 import { logger } from './js/logger.js';
 import { loadSettings, initSettingsUI } from './js/settings.js';
 import { loadChatState } from './js/state.js';
-import { registerEphemerisTools } from './js/tools/register.js';
+import { registerEphemerisTools } from './js/tools/infra/register.js';
 import { initPromptInjection } from './js/prompt-injection.js';
 
 async function init() {

@@ -9,7 +9,7 @@ import { getActiveCalendars } from '../calendar-manager.js';
 import { formatDuration } from '../ui/time-preview.js';
 import { RejectedCallError } from '../errors.js';
 
-import { calendarIdSchema, timeObjectSchema, significanceSchema } from './schema.js';
+import { calendarIdSchema, timeObjectSchema, significanceSchema } from './infra/schema.js';
 
 export function registerUpdateEventTool() {
     const { registerFunctionTool } = getContext();
@@ -42,7 +42,7 @@ export function registerUpdateEventTool() {
             required: ['calendarId'],
         },
         action: async (params) => {
-            const { waitForDependency } = await import('./tool-queue.js');
+            const { waitForDependency } = await import('./infra/tool-queue.js');
             await waitForDependency('calendar', params.calendarId);
             if (params.responseCalendarId) {
                 await waitForDependency('calendar', params.responseCalendarId);
@@ -73,21 +73,25 @@ export function registerUpdateEventTool() {
             let updatedEvent = null;
             let isNew = !existing;
 
-            if (existing) {
+            if (isNew) {
+                // Create mode validation
+                const { Validator } = await import('./infra/schema.js');
+                const prefix = params.id ? `Event ID '${params.id}' not found. To create it:` : 'Validation failed for new event:';
+                const v = new Validator(prefix);
+
+                v.require(params.label, 'label is required for new events');
+                v.require(params.timeObject, 'timeObject is required for new events');
+                
+                v.throwIfErrors();
+                
+                const eventId = addEvent(eventData);
+                updatedEvent = state.events.find(e => e.id === eventId);
+            } else {
                 // Update mode
                 const oldEvent = JSON.parse(JSON.stringify(existing));
                 updatedEvent = updateEvent(params.id, eventData);
-            } else {
-                // Create mode
-                if (!params.label || !params.timeObject) {
-                    const msg = params.id
-                        ? `Event ID '${params.id}' not found. To create a new event with this ID, both 'label' and 'timeObject' are required.`
-                        : 'label and timeObject are required for new events.';
-                    throw new RejectedCallError(msg);
-                }
-                const eventId = addEvent(eventData);
-                updatedEvent = state.events.find(e => e.id === eventId);
             }
+
 
             // Prepare response calendar info
             let responseCalendarTime = null;

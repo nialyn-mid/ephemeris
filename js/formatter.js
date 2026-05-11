@@ -48,6 +48,37 @@ function getSubUnitDescription(lengthInSeconds, currentUnitName, allUnits) {
 }
 
 /**
+ * Formats a duration in seconds into an approximate description using the best unit from a calendar.
+ * Example: "4 Days", "7 Hours", "2 Years".
+ */
+export function formatDurationApproximation(seconds, cal) {
+    const absSeconds = Math.abs(seconds);
+    if (absSeconds === 0) return '0';
+
+    // Find all units with a numeric lengthInBase
+    const units = (cal.units || []).filter(u => u.type === 'number' && u.lengthInBase);
+    if (units.length === 0) return `${absSeconds}s`;
+
+    // Sort by lengthInBase descending to find the largest fitting unit
+    const sorted = [...units].sort((a, b) => b.lengthInBase - a.lengthInBase);
+
+    for (const unit of sorted) {
+        if (absSeconds >= unit.lengthInBase) {
+            const count = Math.floor(absSeconds / unit.lengthInBase);
+            const plural = count === 1 ? '' : 's';
+            return `${count} ${unit.name}${plural}`;
+        }
+    }
+
+    // Fallback to the smallest unit
+    const smallest = sorted[sorted.length - 1];
+    const count = Math.floor(absSeconds / smallest.lengthInBase);
+    const plural = count === 1 ? '' : 's';
+    return `${count} ${smallest.name}${plural}`;
+}
+
+
+/**
  * Formats a single calendar's full hierarchical structure into a markdown block.
  */
 export function formatCalendarDetails(cal) {

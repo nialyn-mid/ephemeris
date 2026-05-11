@@ -69,7 +69,7 @@ function bindEventPopupEvents(dlg) {
     $dlg.find('#ephemeris-event-add').on('click', () => {
         const newEvent = {
             id: `event_${Date.now()}`,
-            displayName: "New Event",
+            label: "New Event",
             description: "Event Description",
             time: state.currentTime,
             significance: 5
@@ -95,7 +95,7 @@ function refreshEventSelect(dlg) {
 
     $select.empty();
     for (const event of currentEvents) {
-        $select.append(`<option value="${event.id}">${event.displayName} (${event.id})</option>`);
+        $select.append(`<option value="${event.id}">${event.label || event.id} (${event.id})</option>`);
     }
     if (currentEvents.length > 0) {
         const lastVal = $select.val();

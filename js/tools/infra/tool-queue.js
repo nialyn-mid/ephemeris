@@ -1,6 +1,6 @@
 import { getContext } from '/scripts/extensions.js';
-import { logger } from '../logger.js';
-import { getCalendar } from '../calendar-manager.js';
+import { logger } from '../../logger.js';
+import { getCalendar } from '../../calendar-manager.js';
 
 /**
  * Tool Queue / Dependency Registry

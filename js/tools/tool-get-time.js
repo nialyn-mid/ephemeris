@@ -5,7 +5,7 @@ import { getCalendar } from '../calendar-manager.js';
 import { convertToTimeObject } from '../time-engine.js';
 import { RejectedCallError } from '../errors.js';
 
-import { calendarIdSchema, timeObjectSchema } from './schema.js';
+import { calendarIdSchema, timeObjectSchema } from './infra/schema.js';
 
 export function registerGetTimeTool() {
     const { registerFunctionTool } = getContext();

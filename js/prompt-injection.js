@@ -6,6 +6,8 @@ import { state, saveChatState } from './state.js';
 import { getActiveCalendars, getCalendar } from './calendar-manager.js';
 import { convertToTimeObject, formatTimeObject } from './time-engine.js';
 import { getEventsInRange, getUpcomingEvents, getPastEvents } from './event-manager.js';
+import { buildTimeInjection } from './injections/time-injection.js';
+import { buildEventInjection } from './injections/event-injection.js';
 
 /**
  * Prompt Injection
@@ -104,100 +106,37 @@ async function updateExtensionPrompt() {
 }
 
 async function buildInjectionText() {
-    const lines = [];
     const calendars = getActiveCalendars();
-
-    if (calendars.length === 0) return null; // No calendars active
-
-    // 1. Current Time
-    const primaryCal = calendars[0]; // Assume first is primary
-    const curTimeObj = convertToTimeObject(state.currentTime, primaryCal);
-    lines.push(`## World Time`);
-    lines.push(`Current Time (${primaryCal.displayName} [${primaryCal.id}]): ${formatTimeObject(curTimeObj, primaryCal)}`);
-
-    // Add secondary calendars if available
-    for (let i = 1; i < Math.min(3, calendars.length); i++) {
-        const cObj = convertToTimeObject(state.currentTime, calendars[i]);
-        lines.push(`Alternative (${calendars[i].displayName} [${calendars[i].id}]): ${formatTimeObject(cObj, calendars[i])}`);
+    if (calendars.length === 0) {
+        logger.debug('No active calendars found for injection.');
+        return null;
     }
 
-    // 1.5 Calendar Details (Optional)
     const context = getContext();
     const chat = context.chat || [];
     const userMessages = chat.filter(m => m.is_user && !m.is_system);
     const isStart = userMessages.length <= 1;
 
-    const freq = settings.injection.injectCalendarDetailsFrequency;
-    let shouldSkipDetails = false;
+    // 1. Time & Calendar Details
+    const { lines: timeLines, consumedDetails } = await buildTimeInjection(calendars, { detailsConsumedInTurn, isStart });
+    logger.debug(`Time Injection: ${timeLines.length} lines generated.`);
 
-    if (freq === 'turn' && detailsConsumedInTurn) {
-        shouldSkipDetails = true;
-    } else if (freq === 'chat' && state.detailsConsumedInChat) {
-        shouldSkipDetails = true;
-    } else if (freq === 'turn' && !isStart && !detailsConsumedInTurn) {
-        if (!isStart) shouldSkipDetails = true;
+    if (consumedDetails) {
+        detailsConsumedInTurn = true;
+        state.detailsConsumedInChat = true;
+        saveChatState();
     }
 
-    if (settings.injection.injectCalendarDetails && settings.injection.injectCalendarDetails !== 'none' && !shouldSkipDetails) {
-        const { formatCalendarDetails } = await import('./formatter.js');
-        lines.push(`\n## Available Calendar Systems`);
+    // 2. Events (Reminders, Chronicle, Schedule)
+    const eventLines = await buildEventInjection(calendars);
+    logger.debug(`Event Injection: ${eventLines.length} lines generated.`);
 
-        let targetCalendars = calendars;
-        if (settings.injection.injectCalendarDetails === 'chat') {
-            targetCalendars = calendars.filter(c => state.calendars.find(sc => sc.id === c.id));
-        } else if (settings.injection.injectCalendarDetails === 'global') {
-            targetCalendars = calendars.filter(c => settings.globalCalendars.find(gc => gc.id === c.id));
-        }
-
-        for (const cal of targetCalendars) {
-            lines.push(formatCalendarDetails(cal));
-        }
+    const allLines = [...timeLines, ...eventLines];
+    if (allLines.length === 0) {
+        logger.debug('No lines generated for injection.');
+        return null;
     }
 
-    // 2. Reminders & Schedule
-    if (settings.injection.injectEvents) {
-        const upcoming = getUpcomingEvents(state.currentTime, settings.injection.timeRangeForward);
-        const past = getPastEvents(state.currentTime, settings.injection.timeRangeBackward);
-
-        // Deduplicate events by ID
-        const eventMap = new Map();
-        [...past, ...upcoming].forEach(e => eventMap.set(e.id, e));
-        const relevantEvents = Array.from(eventMap.values()).sort((a, b) => a.baseTime - b.baseTime);
-
-        if (relevantEvents.length > 0) {
-            lines.push(`\n## Chronicle & Schedule`);
-
-            for (const event of relevantEvents) {
-                const timeDiff = event.baseTime - state.currentTime;
-
-                // Summarization check
-                if (settings.injection.summarizationStrategy === 'significant') {
-                    const maxDist = settings.injection.significanceDistances[event.significance] || 0;
-                    if (Math.abs(timeDiff) > maxDist) {
-                        continue;
-                    }
-                }
-
-                const eTimeObj = convertToTimeObject(event.baseTime, primaryCal);
-                const timeStr = formatTimeObject(eTimeObj, primaryCal);
-
-                const sigMult = 1 + ((event.significance || 1) - 1) * (settings.injection.significanceMultiplier || 0);
-                const effectiveReminderDist = settings.injection.remindersDistance * sigMult;
-                const effectiveNoticeDist = settings.injection.completedNoticesDuration * sigMult;
-
-                let statusSuffix = '';
-                if (timeDiff > 0 && timeDiff <= effectiveReminderDist && settings.injection.remindersEnabled) {
-                    statusSuffix = ' (Approaching)';
-                } else if (timeDiff < 0 && Math.abs(timeDiff) <= effectiveNoticeDist && settings.injection.completedNoticesEnabled) {
-                    statusSuffix = ' (Passed)';
-                }
-
-                lines.push(`- [${timeStr}] ${event.label}${statusSuffix}`);
-            }
-        }
-    }
-
-
-
-    return `<ephemeris_context>\n<!-- ${CONTEXT_MARKER} -->\n${lines.join('\n')}\n</ephemeris_context>`;
+    return `<ephemeris_context>\n<!-- ${CONTEXT_MARKER} -->\n${allLines.join('\n')}\n</ephemeris_context>`;
 }
+

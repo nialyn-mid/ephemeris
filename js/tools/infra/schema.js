@@ -1,7 +1,31 @@
+import { RejectedCallError } from '../../errors.js';
+
 /**
  * Shared Tool Schemas
  * Standardizes common input formats for Ephemeris tools.
  */
+
+export class Validator {
+    constructor(prefix = 'Validation failed') {
+        this.prefix = prefix;
+        this.errors = [];
+    }
+
+    require(condition, message) {
+        if (!condition) {
+            this.errors.push(message);
+        }
+    }
+
+    throwIfErrors() {
+        if (this.errors.length > 0) {
+            // Append punctuation correctly
+            const cleanPrefix = this.prefix.trim();
+            const sep = cleanPrefix.endsWith(':') ? ' ' : ': ';
+            throw new RejectedCallError(`${cleanPrefix}${sep}${this.errors.join('; ')}.`);
+        }
+    }
+}
 
 export const timeObjectSchema = (description) => ({
     type: 'object',
