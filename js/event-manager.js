@@ -50,10 +50,15 @@ export function getEventsInRange(startTime, endTime) {
     return state.events.filter(e => e.baseTime >= startTime && e.baseTime <= endTime);
 }
 
-export function getUpcomingEvents(currentTime, rangeForward) {
-    return getEventsInRange(currentTime, currentTime + rangeForward);
+export function getUpcomingEvents(currentTime, rangeForward = Infinity) {
+    return state.events.filter(e => e.baseTime >= currentTime && e.baseTime <= (currentTime + rangeForward));
 }
 
-export function getPastEvents(currentTime, rangeBackward) {
-    return getEventsInRange(currentTime - rangeBackward, currentTime);
+export function getPastEvents(currentTime, rangeBackward = Infinity) {
+    return state.events.filter(e => e.baseTime < currentTime && e.baseTime >= (currentTime - rangeBackward));
 }
+
+export function getAllEvents() {
+    return [...state.events];
+}
+

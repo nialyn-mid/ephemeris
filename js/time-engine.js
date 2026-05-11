@@ -147,7 +147,7 @@ export function convertToTimeObject(baseTime, calendar) {
     return timeObject;
 }
 
-export function formatTimeObject(timeObject, calendar) {
+export function formatTimeObject(timeObject, calendar, joiner = ', ') {
     if (!timeObject || !calendar || !calendar.units) return 'Unknown Time';
     
     const parts = [];
@@ -156,5 +156,6 @@ export function formatTimeObject(timeObject, calendar) {
             parts.push(`${unit.name}: ${timeObject[unit.name]}`);
         }
     }
-    return parts.join(', ');
+    return parts.join(joiner);
 }
+

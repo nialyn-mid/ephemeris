@@ -154,3 +154,32 @@ export function generateChangelog(oldObj, newObj, keysToIgnore = []) {
     return changes;
 }
 
+/**
+ * Groups a list of events into a hierarchical structure based on their proximity 
+ * to the current time, scaled automatically by the provided calendar's units.
+ */
+export function groupEventsForSchedule(events, calendar, currentBaseTime) {
+    if (!events || events.length === 0) return {};
+
+    // Sort ascending by default
+    const sorted = [...events].sort((a, b) => a.baseTime - b.baseTime);
+
+    const grouped = {};
+    for (const evt of sorted) {
+        const delta = evt.baseTime - currentBaseTime;
+        let groupName = 'Right Now';
+        
+        if (delta !== 0) {
+            const approx = formatDurationApproximation(delta, calendar);
+            groupName = delta > 0 ? `In ${approx}` : `${approx} Ago`;
+        }
+        
+        if (!grouped[groupName]) {
+            grouped[groupName] = [];
+        }
+        grouped[groupName].push(evt);
+    }
+    
+    return grouped;
+}
+

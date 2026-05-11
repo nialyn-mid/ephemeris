@@ -12,7 +12,7 @@ export function registerUpdateTimeTool() {
     registerFunctionTool({
         name: 'eph_update_time',
         displayName: 'Ephemeris: Update Time',
-        description: 'Updates the current world time shared by all calendars, either by setting an absolute time or applying a relative delta. You may specify any input calendar for the given time values.',
+        description: 'Updates the current world time shared by all calendars, either by setting an absolute time or applying a relative delta. You may specify any input calendar for the given time values.\nNote: Fictional time systems are unintuitive and subject to data bias issues. Reccommended to use a familiar time system to update time and request the fictional calendar time as output using responseCalendarId.',
         parameters: {
             type: 'object',
             properties: {
@@ -70,12 +70,12 @@ export function registerUpdateTimeTool() {
                 for (const unit of cal.units) {
                     const inputVal = timeObj[unit.name];
                     const outputVal = newTimeObj[unit.name];
-                    
+
                     if (inputVal !== undefined && inputVal != outputVal) { // Use != for loose comparison (string/number)
                         mismatchedUnits.push(`${unit.name}: input='${inputVal}', output='${outputVal}' (lengthInBase: ${unit.lengthInBase})`);
                     }
                 }
-                
+
                 if (mismatchedUnits.length > 0) {
                     logger.warn(`[DIAGNOSTIC] Time Round-Trip Mismatch detected for calendar '${cal.id}'!`, {
                         input: timeObj,
