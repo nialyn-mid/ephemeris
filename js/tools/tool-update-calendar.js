@@ -131,7 +131,7 @@ Tips:
                 baseTemplate: { type: 'string', description: 'ID of an existing calendar to copy units/settings from (e.g., "gregorian")' },
                 units: {
                     type: 'array',
-                    description: 'Ordered array of units from largest to smallest. Overrides template if provided.',
+                    description: 'Array of units. Overrides template if provided.',
                     items: {
                         type: 'object',
                         properties: {
@@ -172,7 +172,10 @@ Tips:
             required: ['id'],
         },
         action: async (params) => {
-            const { provideDependency } = await import('./infra/tool-queue.js');
+            const { provideDependency, announceCreator } = await import('./infra/tool-queue.js');
+            if (params.id) {
+                announceCreator('calendar', params.id);
+            }
             try {
                 const existingIndex = state.calendars.findIndex(c => c.id === params.id);
                 const isNew = existingIndex === -1;
@@ -200,16 +203,17 @@ Tips:
                 if (params.notes !== undefined) targetCalendar.notes = params.notes;
                 if (params.abbreviation) targetCalendar.abbreviation = params.abbreviation;
 
-                // 4. Resolve relative lengths
+                // 4. Resolve relative lengths and sort by size (Largest to Smallest)
                 if (targetCalendar.units) {
                     resolveLengths(targetCalendar.units);
+                    targetCalendar.units.sort((a, b) => (b.lengthInBase || 0) - (a.lengthInBase || 0));
                 }
 
                 // 5. Validation
                 if (isNew) {
                     const { Validator } = await import('./infra/schema.js');
                     const v = new Validator('Validation failed for new calendar');
-                    
+
                     v.require(targetCalendar.displayName, 'displayName is required for new calendars');
                     v.require(targetCalendar.abbreviation, 'abbreviation is required for new calendars');
                     v.require(targetCalendar.units && targetCalendar.units.length > 0, 'units or a valid baseTemplate are required for new calendars');

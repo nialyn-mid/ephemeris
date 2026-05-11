@@ -42,8 +42,12 @@ export function registerUpdateEventTool() {
             required: ['calendarId'],
         },
         action: async (params) => {
-            const { waitForDependency } = await import('./infra/tool-queue.js');
-            await waitForDependency('calendar', params.calendarId);
+            const { waitForDependency, provideDependency, announceCreator } = await import('./infra/tool-queue.js');
+            if (params.id) {
+                announceCreator('event', params.id);
+            }
+            try {
+                await waitForDependency('calendar', params.calendarId);
             if (params.responseCalendarId) {
                 await waitForDependency('calendar', params.responseCalendarId);
             }
@@ -139,6 +143,11 @@ export function registerUpdateEventTool() {
                 event: updatedEvent,
                 changes: changes
             }, null, 2);
+            } finally {
+                if (params.id) {
+                    provideDependency('event', params.id);
+                }
+            }
         },
 
     });

@@ -99,8 +99,10 @@ export function convertToTimeObject(baseTime, calendar) {
     const totalTime = Math.floor(baseTime * speed) - (calendar.epochOffset || 0);
     let remaining = totalTime;
     
-    // Iterate from largest unit to smallest. Assumes units array is correctly ordered.
-    for (const unit of calendar.units) {
+    // Iterate from largest unit to smallest. Ensure units are correctly ordered.
+    const sortedUnits = [...calendar.units].sort((a, b) => (b.lengthInBase || 0) - (a.lengthInBase || 0));
+    
+    for (const unit of sortedUnits) {
         const isVariable = unit.type === 'variable' && Array.isArray(unit.values);
         if (!isVariable && (!unit.lengthInBase || unit.lengthInBase <= 0)) continue;
         
