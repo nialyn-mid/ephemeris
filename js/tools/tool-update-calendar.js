@@ -39,11 +39,16 @@ function resolveLengths(units) {
                     resolved.set(unit.name, unit.lengthInBase);
                     changed = true;
                 }
-            } else if (unit.type === 'variable' && Array.isArray(unit.values)) {
+            } else if ((unit.type === 'variable' || unit.type === 'cyclic') && Array.isArray(unit.values)) {
+                // If it's cyclic and all values are strings, it needs an external length (already handled by Seed or SubUnits)
+                // If it's cyclic or variable and values are objects, we sum their lengths.
                 let allValuesResolved = true;
                 let totalLength = 0;
+                let hasObjects = false;
+
                 for (const v of unit.values) {
                     if (typeof v === 'object') {
+                        hasObjects = true;
                         if (v.lengthInBase) {
                             totalLength += v.lengthInBase;
                         } else if (v.lengthInSubUnits) {
@@ -62,7 +67,8 @@ function resolveLengths(units) {
                         }
                     }
                 }
-                if (allValuesResolved) {
+
+                if (hasObjects && allValuesResolved) {
                     unit.lengthInBase = totalLength;
                     resolved.set(unit.name, unit.lengthInBase);
                     changed = true;
@@ -84,13 +90,17 @@ function resolveLengths(units) {
                 } else {
                     return `'${u.name}' depends on '${subUnitName}' which is also unresolved`;
                 }
-            } else if (u.type === 'number' || u.type === 'variable' || u.type === 'cyclic') {
-                return `'${u.name}' provides neither 'lengthInBase' nor 'lengthInSubUnits'`;
+            } else if (u.type === 'number') {
+                return `'${u.name}' needs 'lengthInBase' or 'lengthInSubUnits'`;
+            } else if (u.type === 'variable') {
+                return `'${u.name}' must have lengths defined for each entry in 'values'`;
+            } else if (u.type === 'cyclic') {
+                return `'${u.name}' must have a uniform 'lengthInBase' OR individual lengths defined for each entry in 'values'`;
             }
             return null;
         }).filter(Boolean);
 
-        const primaryError = unresolved[0]; // Galactic Cycle in the user's case
+        const primaryError = unresolved[0];
         let message = `Could not resolve length for unit '${primaryError.name}'.`;
 
         if (errorDetails.length > 0) {
@@ -137,11 +147,14 @@ Tips:
                         properties: {
                             name: { type: 'string' },
                             type: { type: 'string', enum: ['number', 'string', 'variable', 'cyclic'] },
-                            lengthInBase: { type: 'number', description: 'Length of this unit in base time seconds. Use for smallest units.' },
+                            lengthInBase: {
+                                type: 'number',
+                                description: 'Duration of this unit in base seconds. For "cyclic" units, this is the length of one step (e.g. 86400 for a 1-day weekday).'
+                            },
                             lengthInSubUnits: lengthInSubUnitsSchema(),
                             values: {
                                 type: 'array',
-                                description: 'Array of strings (for cyclic) or objects with {name, lengthInBase/lengthInSubUnits} (for variable)',
+                                description: 'For "variable" or non-uniform "cyclic" units, provide objects: [{"name": "A", "lengthInBase": 100}, ...]. For uniform "cyclic" units, an array of strings is sufficient.',
                                 items: {
                                     anyOf: [
                                         { type: 'string' },

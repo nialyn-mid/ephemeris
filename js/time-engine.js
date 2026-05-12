@@ -107,11 +107,33 @@ export function convertToTimeObject(baseTime, calendar) {
         if (!isVariable && (!unit.lengthInBase || unit.lengthInBase <= 0)) continue;
         
         if (unit.type === 'cyclic' && Array.isArray(unit.values)) {
-            let cycles = Math.floor(totalTime / unit.lengthInBase);
             let offset = unit.offset || 0;
-            let index = (cycles + offset) % unit.values.length;
-            if (index < 0) index += unit.values.length; // Handle negative modulo
-            timeObject[unit.name] = unit.values[index];
+            const hasObjects = typeof unit.values[0] === 'object';
+            
+            if (hasObjects) {
+                // Non-uniform cycle: find position by summing durations
+                let cycleTime = totalTime % unit.lengthInBase;
+                if (cycleTime < 0) cycleTime += unit.lengthInBase;
+                
+                let accumulated = 0;
+                let foundIndex = 0;
+                for (let i = 0; i < unit.values.length; i++) {
+                    const idx = (i + offset) % unit.values.length;
+                    const v = unit.values[idx];
+                    accumulated += v.lengthInBase || 0;
+                    if (cycleTime < accumulated) {
+                        foundIndex = idx;
+                        break;
+                    }
+                }
+                timeObject[unit.name] = unit.values[foundIndex].name;
+            } else {
+                // Uniform cycle: simple modulo
+                let cycles = Math.floor(totalTime / unit.lengthInBase);
+                let index = (cycles + offset) % unit.values.length;
+                if (index < 0) index += unit.values.length;
+                timeObject[unit.name] = unit.values[index];
+            }
             continue; // Cyclic units do not consume remaining time
         }
 
