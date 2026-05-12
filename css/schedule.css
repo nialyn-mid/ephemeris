@@ -130,10 +130,17 @@
     padding: 10px;
     display: flex;
     gap: 15px;
-    transition: transform 0.1s, box-shadow 0.1s;
+    transition: transform 0.1s, box-shadow 0.1s, border-color 0.5s, background-color 0.5s;
     align-items: stretch;
-    contain: content; /* Layout isolation for performance */
+    contain: content;
 }
+
+.eph-schedule-item.highlight {
+    border-color: var(--SmartThemeQuoteColor);
+    background: rgba(var(--SmartThemeQuoteColor-rgb, 0, 255, 255), 0.1);
+    box-shadow: 0 0 10px var(--SmartThemeQuoteColor);
+}
+
 
 
 .eph-schedule-item:hover {
@@ -211,11 +218,40 @@
     border: 1px solid rgba(255,255,255,0.05);
 }
 
-.eph-schedule-empty {
-    text-align: center;
-    padding: 30px 10px;
-    opacity: 0.5;
-    font-style: italic;
+/* Footer / Scroll To */
+.eph-schedule-footer {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 10px;
+    background: rgba(0,0,0,0.2);
+    border-top: 1px solid var(--SmartThemeBorderColor);
+    font-size: 0.9em;
+}
+
+
+.eph-scroll-to-label {
+    white-space: nowrap;
+    opacity: 0.7;
+    font-weight: bold;
+}
+
+.eph-schedule-footer select {
+    flex: 1.5;
+    min-width: 0;
+}
+
+.eph-schedule-footer input {
+    flex: 1;
+    min-width: 0;
+}
+
+.eph-schedule-footer .menu_button {
+    padding: 5px 10px;
+    background: var(--SmartThemeQuoteColor);
+    color: var(--SmartThemeBodyColor);
+    border-radius: 5px;
+    cursor: pointer;
 }
 
 /* Resize Handles */

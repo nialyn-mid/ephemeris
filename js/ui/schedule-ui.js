@@ -1,9 +1,10 @@
 import { getActiveCalendars, getCalendar } from '../calendar-manager.js';
 import { getUpcomingEvents, getPastEvents } from '../event-manager.js';
-import { formatTimeObject, convertToTimeObject } from '../time-engine.js';
+import { formatTimeObject, convertToTimeObject, convertToBaseTime, calculateDeltaSeconds } from '../time-engine.js';
 import { groupEventsForSchedule } from '../formatter.js';
 import { state } from '../state.js';
 import { eventSource } from '/scripts/events.js';
+
 
 let panelEl = null;
 let currentTab = 'upcoming';
@@ -86,8 +87,15 @@ function bindEvents() {
     const select = panelEl.querySelector('#eph-schedule-calendar-select');
     select.addEventListener('change', (e) => {
         displayCalendarId = e.target.value;
+        updateScrollUnits();
         renderList();
     });
+
+    // Jump to Time
+    const jumpInput = panelEl.querySelector('#eph-scroll-value');
+    const debouncedJump = debounce(() => jumpToTime(), 500);
+    jumpInput.addEventListener('input', () => debouncedJump());
+    panelEl.querySelector('#eph-scroll-unit').addEventListener('change', () => jumpToTime());
 
     setupDragging();
     setupResizing();
@@ -96,6 +104,7 @@ function bindEvents() {
     eventSource.on('ephemeris-state-changed', () => {
         if (panelEl.style.display !== 'none') {
             updateDropdown();
+            updateScrollUnits();
             renderList();
         }
     });
@@ -201,6 +210,7 @@ export function toggleSchedulePanel() {
     if (panelEl.style.display === 'none') {
         panelEl.style.display = 'flex';
         updateDropdown();
+        updateScrollUnits();
         clampToBounds();
         renderList();
     } else {
@@ -215,6 +225,94 @@ function updateDropdown() {
     if (!displayCalendarId || !cals.find(c => c.id === displayCalendarId)) displayCalendarId = cals[0].id;
     select.innerHTML = cals.map(c => `<option value="${c.id}" ${c.id === displayCalendarId ? 'selected' : ''}>${c.displayName}</option>`).join('');
 }
+
+function updateScrollUnits() {
+    const select = panelEl.querySelector('#eph-scroll-unit');
+    const cal = getCalendar(displayCalendarId);
+    if (!cal || !cal.units) { select.innerHTML = ''; return; }
+    const units = cal.units.filter(u => u.type === 'number' || u.type === 'variable');
+    select.innerHTML = units.map(u => `<option value="${u.name}">${u.name}</option>`).join('');
+}
+
+function jumpToTime() {
+    const unitName = panelEl.querySelector('#eph-scroll-unit').value;
+    const val = panelEl.querySelector('#eph-scroll-value').value;
+    const cal = getCalendar(displayCalendarId);
+    if (!unitName || !val || !cal) return;
+
+    // In Schedule UI, jumps are relative to current time based on the tab
+    const deltaObj = { [unitName]: val };
+    const deltaSeconds = calculateDeltaSeconds(deltaObj, cal);
+    
+    let targetBaseTime;
+    if (currentTab === 'upcoming') {
+        targetBaseTime = state.currentTime + deltaSeconds;
+    } else {
+        targetBaseTime = state.currentTime - deltaSeconds;
+    }
+
+    const resultingTimeObj = convertToTimeObject(targetBaseTime, cal);
+    const targetFormatted = formatTimeObject(resultingTimeObj, cal);
+    
+    console.log(`[Ephemeris] Jump Offset: ${val} ${unitName} (${currentTab === 'upcoming' ? '+' : '-'})`);
+    console.log(`[Ephemeris] Resulting Target: ${targetFormatted} (BaseTime: ${targetBaseTime})`);
+    
+    let bestIndex = -1;
+    let minDiff = Infinity;
+    let isOutOfRange = false;
+
+    // Check if target is before first or after last
+    if (renderQueue.length > 0) {
+        const eventsOnly = renderQueue.filter(r => r.type === 'event');
+        if (eventsOnly.length > 0) {
+            const firstTime = eventsOnly[0].value.baseTime;
+            const lastTime = eventsOnly[eventsOnly.length - 1].value.baseTime;
+            
+            if (targetBaseTime < firstTime) isOutOfRange = 'BEFORE_START';
+            else if (targetBaseTime > lastTime) isOutOfRange = 'AFTER_END';
+        }
+    }
+
+    console.log(`[Ephemeris] Jump Target: ${targetFormatted} (BaseTime: ${targetBaseTime}) ${isOutOfRange ? `[OUT OF RANGE: ${isOutOfRange}]` : ''}`);
+
+    for (let i = 0; i < renderQueue.length; i++) {
+        const item = renderQueue[i];
+        if (item.type === 'event') {
+            const diff = Math.abs(item.value.baseTime - targetBaseTime);
+            if (diff < minDiff) {
+                minDiff = diff;
+                bestIndex = i;
+            }
+        }
+    }
+
+
+    if (bestIndex === -1) {
+        console.warn('[Ephemeris] No events found to jump to.');
+        return;
+    }
+
+    const bestEvent = renderQueue[bestIndex].value;
+    console.log(`[Ephemeris] Closest match: "${bestEvent.label}" (Diff: ${minDiff}s)`);
+
+    const container = panelEl.querySelector('#eph-schedule-list');
+    container.innerHTML = '';
+    const startOffset = Math.max(0, bestIndex - 3);
+    loadedCount = startOffset;
+    renderNextChunk();
+    
+    const relativeIndex = bestIndex - startOffset;
+    const targetEl = container.children[relativeIndex];
+    if (targetEl) {
+        setTimeout(() => {
+            targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            targetEl.classList.add('highlight');
+            setTimeout(() => targetEl.classList.remove('highlight'), 2000);
+        }, 50);
+    }
+}
+
+
 
 function renderList() {
     const container = panelEl.querySelector('#eph-schedule-list');
@@ -275,7 +373,6 @@ function renderNextChunk() {
             `;
         }
     }
-    
     container.insertAdjacentHTML('beforeend', html);
     loadedCount += chunk.length;
 }
