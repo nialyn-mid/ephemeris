@@ -1,6 +1,6 @@
 # Ephemeris
 
-Ephemeris is a calendar and time-tracking engine for SillyTavern that allows you to manage custom world time and schedule world events that are injected into the character context.
+Ephemeris is a calendar and time-tracking engine for SillyTavern that allows your AI model to manage custom world time and schedule world events that are injected into the character context.
 
 ## Features
 

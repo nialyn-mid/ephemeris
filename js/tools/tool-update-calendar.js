@@ -119,6 +119,9 @@ export function registerUpdateCalendarTool() {
 If the calendar ID already exists, it will be patched with the provided fields. 
 If it is a new ID, it will be created (requires displayName, abbreviation, and units/baseTemplate).
 
+Crucial Requirements:
+- Each unit MUST have a unique 'name'. This name is used as the key in time objects and for relative length definitions.
+
 Supported Unit Types:
 - 'number': Basic division (e.g. Hour = 3600s). Use startAtOne: true for 1-indexed (e.g. Day 1). Use startValue (e.g. 1970) for timeline anchoring.
 - 'variable': For units with varying lengths (e.g. Months). Provide 'values' as an array of objects: [{"name": "Jan", "lengthInBase": 2678400}, ...]
@@ -231,6 +234,28 @@ Tips:
                     v.require(targetCalendar.abbreviation, 'abbreviation is required for new calendars');
                     v.require(targetCalendar.units && targetCalendar.units.length > 0, 'units or a valid baseTemplate are required for new calendars');
 
+                    // Validate each unit
+                    if (targetCalendar.units) {
+                        targetCalendar.units.forEach((u, idx) => {
+                            const unitId = u.name || `[Unit ${idx}]`;
+                            v.require(u.name && u.name.trim().length > 0, `Unit at index ${idx} is missing a 'name'`);
+                            v.require(u.type, `Unit '${unitId}' is missing a 'type'`);
+
+                            if (u.type === 'variable' || u.type === 'cyclic') {
+                                v.require(Array.isArray(u.values) && u.values.length > 0, `Unit '${unitId}' of type '${u.type}' must provide a non-empty 'values' array`);
+                                if (Array.isArray(u.values)) {
+                                    u.values.forEach((val, vIdx) => {
+                                        if (typeof val === 'object') {
+                                            v.require(val.name && val.name.trim().length > 0, `Unit '${unitId}' has an object value at index ${vIdx} missing a 'name'`);
+                                        } else {
+                                            v.require(val && val.toString().trim().length > 0, `Unit '${unitId}' has an empty string value at index ${vIdx}`);
+                                        }
+                                    });
+                                }
+                            }
+                        });
+                    }
+
                     v.throwIfErrors();
 
                     state.calendars.push(targetCalendar);
@@ -238,18 +263,52 @@ Tips:
                     state.calendars[existingIndex] = targetCalendar;
                 }
 
+                // 6. Final Warnings (non-fatal)
+                const warnings = [];
+                if (targetCalendar.units) {
+                    targetCalendar.units.forEach(u => {
+                        if (u.type === 'cyclic') {
+                            // Find step length (for uniform it's lengthInBase / values.length if I resolved it that way? 
+                            // No, for uniform strings, lengthInBase IS the step length.
+                            // For non-uniform objects, it's the total.
+                            const hasObjects = typeof u.values[0] === 'object';
+                            const stepLength = hasObjects ? u.values[0].lengthInBase : u.lengthInBase;
+
+                            // Find any unit that uses a unit of this step length as its sub-unit
+                            const matchingUnits = targetCalendar.units.filter(other => other.lengthInBase === stepLength && other.name !== u.name);
+
+                            for (const match of matchingUnits) {
+                                // Find if any unit defines itself as a multiple of this match
+                                const parents = targetCalendar.units.filter(p => p.lengthInSubUnits && p.lengthInSubUnits[match.name]);
+                                for (const parent of parents) {
+                                    const multiplier = parent.lengthInSubUnits[match.name];
+                                    if (multiplier !== u.values.length) {
+                                        warnings.push(`Suspicious cycle (potential issue identified): Unit '${parent.name}' consists of ${multiplier} '${match.name}'s, but cyclic unit '${u.name || '[Unnamed]'}' provides ${u.values.length} labels for that same duration. If '${match.name}' is intended to align with '${u.name || '[Unnamed]'}' in a '${parent.name}', either '${parent.name}' should be updated to use ${u.values.length} '${match.name}'s, or '${u.name || '[Unnamed]'}' should use ${multiplier} labels.`);
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+
                 saveChatState();
 
                 const { generateChangelog } = await import('../formatter.js');
                 const changes = isNew ? [] : generateChangelog(oldCalendar, targetCalendar);
 
+                let finalMessage = `Calendar '${targetCalendar.displayName}' ${isNew ? 'created' : 'updated'}.` + (changes.length > 0 ? ` Changes: ${changes.join('; ')}` : '');
+                if (warnings.length > 0) {
+                    finalMessage += `\n\nWARNINGS:\n- ${warnings.join('\n- ')}`;
+                }
+
                 return JSON.stringify({
                     status: 'ok',
                     error: false,
-                    message: `Calendar '${targetCalendar.displayName}' ${isNew ? 'created' : 'updated'}.` + (changes.length > 0 ? ` Changes: ${changes.join('; ')}` : ''),
+                    message: finalMessage,
                     calendarId: targetCalendar.id,
                     isNew: isNew,
-                    changes: changes
+                    changes: changes,
+                    warnings: warnings
                 }, null, 2);
             } finally {
                 provideDependency('calendar', params.id);

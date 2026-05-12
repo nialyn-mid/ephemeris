@@ -21,7 +21,7 @@ export function getActiveCalendars() {
     }
 
     const result = Array.from(map.values());
-    logger.debug(`[CAL-MGR] Resolved: ${result.map(c => c.id).join(', ')}`);
+    //logger.debug(`[CAL-MGR] Resolved: ${result.map(c => c.id).join(', ')}`);
     return result;
 }
 
