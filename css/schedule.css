@@ -132,7 +132,9 @@
     gap: 15px;
     transition: transform 0.1s, box-shadow 0.1s;
     align-items: stretch;
+    contain: content; /* Layout isolation for performance */
 }
+
 
 .eph-schedule-item:hover {
     transform: translateY(-1px);
