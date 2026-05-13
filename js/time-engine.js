@@ -10,8 +10,31 @@ export function convertToBaseTime(timeObject, calendar) {
 
     let baseTime = calendar.epochOffset || 0;
     
+    // Sort units by size (largest first) to handle overrides correctly
+    const sortedUnits = [...calendar.units].sort((a, b) => (b.lengthInBase || 0) - (a.lengthInBase || 0));
+    
+    // Track which units are "shadowed" by a more specific superUnit relationship
+    const shadowedUnits = new Set();
+    for (const unit of sortedUnits) {
+        if (timeObject[unit.name] !== undefined && unit.superUnit) {
+            // Find all units between this unit and its superUnit and shadow them
+            const superUnitObj = calendar.units.find(u => u.name === unit.superUnit);
+            if (superUnitObj) {
+                const superSize = superUnitObj.lengthInBase || 0;
+                const unitSize = unit.lengthInBase || 0;
+                for (const other of calendar.units) {
+                    const otherSize = other.lengthInBase || 0;
+                    if (otherSize < superSize && otherSize > unitSize) {
+                        shadowedUnits.add(other.name);
+                    }
+                }
+            }
+        }
+    }
+
     for (const unit of calendar.units) {
-        if (unit.type === 'cyclic') continue; // Cyclic units are derived, not absolute
+        if (unit.type === 'cyclic') continue;
+        if (shadowedUnits.has(unit.name)) continue;
 
         if (timeObject[unit.name] !== undefined) {
             let val = timeObject[unit.name];
@@ -33,9 +56,7 @@ export function convertToBaseTime(timeObject, calendar) {
                 val = Number(val);
                 if (isNaN(val)) val = 0;
                 
-                // Adjust for starting values (e.g. Year 1970) and indexing
                 let startOffset = unit.startValue !== undefined ? unit.startValue : (unit.startAtOne ? 1 : 0);
-                
                 val -= startOffset;
                 baseTime += val * (unit.lengthInBase || 0);
             }
@@ -51,7 +72,6 @@ export function calculateDeltaSeconds(deltaObject, calendar) {
 
     let deltaSeconds = 0;
 
-    // Special bypass for raw seconds injection
     if (deltaObject._baseSeconds !== undefined) {
         let raw = Number(deltaObject._baseSeconds);
         if (!isNaN(raw)) {
@@ -67,9 +87,6 @@ export function calculateDeltaSeconds(deltaObject, calendar) {
             if (isNaN(val)) continue;
             
             if (unit.type === 'variable' && Array.isArray(unit.values)) {
-                // For delta, we use the average length or the first few items.
-                // Simple approach: sum the first 'val' items if positive, or just use a standard year/month length.
-                // But since our variables are fixed lengths in settings, we can just sum them.
                 if (val > 0) {
                     for (let i = 0; i < val; i++) {
                         const v = unit.values[i % unit.values.length];
@@ -95,23 +112,31 @@ export function convertToTimeObject(baseTime, calendar) {
     if (!calendar || !calendar.units) return {};
 
     const timeObject = {};
+    const remainders = {}; // Stores remaining time AFTER unit processing
     const speed = calendar.conversionFactor || 1.0;
     const totalTime = Math.floor(baseTime * speed) - (calendar.epochOffset || 0);
     let remaining = totalTime;
     
-    // Iterate from largest unit to smallest. Ensure units are correctly ordered.
     const sortedUnits = [...calendar.units].sort((a, b) => (b.lengthInBase || 0) - (a.lengthInBase || 0));
     
+    // Seed total time as the "top level" remainder for units with no parent or explicit superUnit
+    remainders["_total"] = totalTime;
+
     for (const unit of sortedUnits) {
         const isVariable = unit.type === 'variable' && Array.isArray(unit.values);
         if (!isVariable && (!unit.lengthInBase || unit.lengthInBase <= 0)) continue;
         
+        // Determine which pool to use for value calculation
+        let calcRemaining = remaining;
+        if (unit.superUnit && remainders[unit.superUnit] !== undefined) {
+            calcRemaining = remainders[unit.superUnit];
+        }
+
         if (unit.type === 'cyclic' && Array.isArray(unit.values)) {
             let offset = unit.offset || 0;
             const hasObjects = typeof unit.values[0] === 'object';
             
             if (hasObjects) {
-                // Non-uniform cycle: find position by summing durations
                 let cycleTime = totalTime % unit.lengthInBase;
                 if (cycleTime < 0) cycleTime += unit.lengthInBase;
                 
@@ -128,39 +153,54 @@ export function convertToTimeObject(baseTime, calendar) {
                 }
                 timeObject[unit.name] = unit.values[foundIndex].name;
             } else {
-                // Uniform cycle: simple modulo
                 let cycles = Math.floor(totalTime / unit.lengthInBase);
                 let index = (cycles + offset) % unit.values.length;
                 if (index < 0) index += unit.values.length;
                 timeObject[unit.name] = unit.values[index];
             }
-            continue; // Cyclic units do not consume remaining time
+            continue;
         }
 
         if (unit.type === 'variable' && Array.isArray(unit.values)) {
+            // For variable units, we MUST consume from the main 'remaining' pool
+            // But we find the 'activeName' based on the specified pool
+            let tempRemaining = calcRemaining;
             let activeName = unit.values[0].name;
             for (const v of unit.values) {
-                if (remaining >= v.lengthInBase) {
-                    remaining -= v.lengthInBase;
+                if (tempRemaining >= v.lengthInBase) {
+                    tempRemaining -= v.lengthInBase;
                 } else {
                     activeName = v.name;
                     break;
                 }
             }
             timeObject[unit.name] = activeName;
+            
+            // Still MUST update the global 'remaining' for the next unit in the standard hierarchy
+            let actualRemaining = remaining;
+            for (const v of unit.values) {
+                if (actualRemaining >= v.lengthInBase) {
+                    actualRemaining -= v.lengthInBase;
+                } else {
+                    break;
+                }
+            }
+            remaining = actualRemaining;
+            remainders[unit.name] = remaining;
             continue;
         }
 
-        let val = Math.floor(remaining / unit.lengthInBase);
+        let val = Math.floor(calcRemaining / unit.lengthInBase);
+        
+        // Update main pool
         remaining = remaining % unit.lengthInBase;
+        remainders[unit.name] = remaining;
         
         if (unit.type === 'string' && Array.isArray(unit.values)) {
-            // Handle overflow by modulo or clamping.
             const index = val >= 0 ? val % unit.values.length : 0; 
             timeObject[unit.name] = unit.values[index];
         } else {
             let startOffset = unit.startValue !== undefined ? unit.startValue : (unit.startAtOne ? 1 : 0);
-            
             val += startOffset;
             timeObject[unit.name] = val;
         }
@@ -169,15 +209,4 @@ export function convertToTimeObject(baseTime, calendar) {
     return timeObject;
 }
 
-export function formatTimeObject(timeObject, calendar, joiner = ', ') {
-    if (!timeObject || !calendar || !calendar.units) return 'Unknown Time';
-    
-    const parts = [];
-    for (const unit of calendar.units) {
-        if (timeObject[unit.name] !== undefined) {
-            parts.push(`${unit.name}: ${timeObject[unit.name]}`);
-        }
-    }
-    return parts.join(joiner);
-}
 

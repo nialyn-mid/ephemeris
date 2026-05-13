@@ -1,48 +1,54 @@
 import { getContext } from '/scripts/extensions.js';
 import { logger, setLogLevel } from './logger.js';
+import { eventSource } from '/scripts/events.js';
 
 export const MODULE_NAME = 'ephemeris';
 
 export const defaultSettings = {
     logLevel: 2,
     baseTime: 0,
+    requireShortFormat: true,
+    showFormattedInSchedule: false,
     globalCalendars: [
         {
             id: 'gregorian',
             displayName: 'IRL International Standard',
             abbreviation: 'ISO 8601',
             units: [
-                { name: 'Year', type: 'number', lengthInBase: 31536000, startValue: 1970 },
+                { name: 'Year', type: 'number', lengthInBase: 31536000, startValue: 1970, formatChar: 'Y' },
                 {
                     name: 'Month',
                     type: 'variable',
+                    formatChar: 'M',
                     values: [
-                        { name: 'January', lengthInBase: 2678400 },
-                        { name: 'February', lengthInBase: 2419200 },
-                        { name: 'March', lengthInBase: 2678400 },
-                        { name: 'April', lengthInBase: 2592000 },
-                        { name: 'May', lengthInBase: 2678400 },
-                        { name: 'June', lengthInBase: 2592000 },
-                        { name: 'July', lengthInBase: 2678400 },
-                        { name: 'August', lengthInBase: 2678400 },
-                        { name: 'September', lengthInBase: 2592000 },
-                        { name: 'October', lengthInBase: 2678400 },
-                        { name: 'November', lengthInBase: 2592000 },
-                        { name: 'December', lengthInBase: 2678400 }
+                        { name: 'January', lengthInSubUnits: { 'Day': 31 } },
+                        { name: 'February', lengthInSubUnits: { 'Day': 28 } },
+                        { name: 'March', lengthInSubUnits: { 'Day': 31 } },
+                        { name: 'April', lengthInSubUnits: { 'Day': 30 } },
+                        { name: 'May', lengthInSubUnits: { 'Day': 31 } },
+                        { name: 'June', lengthInSubUnits: { 'Day': 30 } },
+                        { name: 'July', lengthInSubUnits: { 'Day': 31 } },
+                        { name: 'August', lengthInSubUnits: { 'Day': 31 } },
+                        { name: 'September', lengthInSubUnits: { 'Day': 30 } },
+                        { name: 'October', lengthInSubUnits: { 'Day': 31 } },
+                        { name: 'November', lengthInSubUnits: { 'Day': 30 } },
+                        { name: 'December', lengthInSubUnits: { 'Day': 31 } }
                     ]
                 },
-                { name: 'Day', type: 'number', lengthInBase: 86400, startAtOne: true },
+                { name: 'Day', type: 'number', lengthInBase: 86400, startAtOne: true, formatChar: 'D', superUnit: 'Month' },
                 {
                     name: 'Weekday',
                     type: 'cyclic',
                     lengthInBase: 86400,
                     offset: 4, // Epoch 0 is a Thursday. Offset 4 maps to index 4 (Thursday) if list starts at Sunday.
-                    values: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+                    values: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+                    formatChar: 'W'
                 },
-                { name: 'Hour', type: 'number', lengthInBase: 3600 },
-                { name: 'Minute', type: 'number', lengthInBase: 60 },
-                { name: 'Second', type: 'number', lengthInBase: 1 }
+                { name: 'Hour', type: 'number', lengthInBase: 3600, formatChar: 'H' },
+                { name: 'Minute', type: 'number', lengthInBase: 60, formatChar: 'm' },
+                { name: 'Second', type: 'number', lengthInBase: 1, formatChar: 's' }
             ],
+            timeFormat: 'YYYY-MM-DD HH:mm:ss (WWWW)',
             epochOffset: 0,
             conversionFactor: 1.0,
             notes: "The mathematical representation of this standard calendar approximates all years to exactly 365 days (ignoring leap years), and sets Epoch 0 to January 1, 1970. Hours are 24-hour format (0-23); you may suffix the first 12 hours as AM and suffix the last 12 hours - subtracting 12 - with PM for dialogue (e.g. the 13th hour in a day is 1 PM). You may also just state the hour in 24-hour format according to the preference of the user. Years follow ISO 8601 logic where Year 0 is 1 BCE, and Year -1 is 2 BCE."
@@ -52,6 +58,7 @@ export const defaultSettings = {
     injection: {
         enabled: true,
         injectEvents: true,
+        injectFormattedInPrompt: false,
         injectCalendarDetails: 'none',
         injectCalendarDetailsFrequency: 'every', // 'every' | 'turn' | 'chat'
         timeRangeBackward: 3600 * 24, // 1 day

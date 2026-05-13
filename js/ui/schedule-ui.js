@@ -1,8 +1,10 @@
 import { getActiveCalendars, getCalendar } from '../calendar-manager.js';
 import { getUpcomingEvents, getPastEvents } from '../event-manager.js';
-import { formatTimeObject, convertToTimeObject, convertToBaseTime, calculateDeltaSeconds } from '../time-engine.js';
+import { convertToTimeObject, convertToBaseTime, calculateDeltaSeconds } from '../time-engine.js';
+import { formatTimeObject, renderFormattedTime } from '../time-formatter.js';
 import { groupEventsForSchedule } from '../formatter.js';
-import { state } from '../state.js';
+import { state, saveChatState } from '../state.js';
+import { settings, saveSettings } from '../settings.js';
 import { eventSource } from '/scripts/events.js';
 
 
@@ -97,6 +99,13 @@ function bindEvents() {
     jumpInput.addEventListener('input', () => debouncedJump());
     panelEl.querySelector('#eph-scroll-unit').addEventListener('change', () => jumpToTime());
 
+    panelEl.querySelector('#eph-schedule-toggle-format').addEventListener('click', () => {
+        settings.showFormattedInSchedule = !settings.showFormattedInSchedule;
+        saveSettings();
+        updateFormatToggle();
+    });
+
+    updateFormatToggle();
     setupDragging();
     setupResizing();
 
@@ -215,6 +224,18 @@ export function toggleSchedulePanel() {
         renderList();
     } else {
         panelEl.style.display = 'none';
+    }
+}
+
+function updateFormatToggle() {
+    if (!panelEl) return;
+    const btn = panelEl.querySelector('#eph-schedule-toggle-format');
+    if (settings.showFormattedInSchedule) {
+        panelEl.classList.add('eph-format-short');
+        btn.classList.add('active');
+    } else {
+        panelEl.classList.remove('eph-format-short');
+        btn.classList.remove('active');
     }
 }
 
@@ -361,10 +382,12 @@ function renderNextChunk() {
             const timeRows = cal.units.filter(u => tObj[u.name] !== undefined)
                 .map(u => `<div class="eph-time-row"><span class="eph-time-label">${u.name}</span><span class="eph-time-value">${tObj[u.name]}</span></div>`).join('');
             const tagsHtml = (evt.tags || []).map(t => `<span class="eph-schedule-tag">${t}</span>`).join('');
+            const formattedTime = renderFormattedTime(tObj, cal);
             html += `
                 <div class="eph-schedule-item">
                     <div class="eph-schedule-item-main">
                         <div class="eph-schedule-item-title">${evt.label}</div>
+                        <div class="eph-schedule-item-time-inline">${formattedTime}</div>
                         ${evt.description ? `<div class="eph-schedule-item-desc">${evt.description}</div>` : ''}
                         ${tagsHtml ? `<div class="eph-schedule-item-tags">${tagsHtml}</div>` : ''}
                     </div>

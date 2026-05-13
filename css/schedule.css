@@ -39,15 +39,34 @@
     gap: 8px;
 }
 
+.eph-schedule-controls {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
 .eph-schedule-controls .menu_button {
     cursor: pointer;
     padding: 5px;
     opacity: 0.8;
-    transition: opacity 0.2s;
+    transition: all 0.2s;
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
 }
 
-.eph-schedule-controls .menu_button:hover {
+.eph-schedule-controls .menu_button:hover,
+.eph-schedule-controls .menu_button.active {
     opacity: 1;
+    background-color: color-mix(in srgb, var(--SmartThemeQuoteColor), transparent 80%) !important;
+    color: var(--SmartThemeQuoteColor);
+}
+
+.eph-schedule-controls .menu_button:active {
+    background-color: color-mix(in srgb, var(--SmartThemeQuoteColor), transparent 60%) !important;
 }
 
 /* Toolbar */
@@ -252,6 +271,29 @@
     color: var(--SmartThemeBodyColor);
     border-radius: 5px;
     cursor: pointer;
+}
+
+.eph-schedule-item-time-inline {
+    font-size: 0.8em;
+    color: var(--SmartThemeQuoteColor);
+    font-weight: bold;
+    margin-top: -2px;
+    margin-bottom: 3px;
+    opacity: 0.8;
+}
+
+/* Toggle Logic */
+.eph-schedule-panel.eph-format-short .eph-schedule-item-time {
+    display: none;
+}
+
+.eph-schedule-panel:not(.eph-format-short) .eph-schedule-item-time-inline {
+    display: none;
+}
+
+#eph-schedule-toggle-format.active {
+    color: var(--SmartThemeQuoteColor);
+    text-shadow: 0 0 5px var(--SmartThemeQuoteColor);
 }
 
 /* Resize Handles */

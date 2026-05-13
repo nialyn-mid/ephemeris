@@ -97,12 +97,14 @@ export function registerUpdateEventTool() {
             }
 
 
+            const { convertToTimeObject } = await import('../time-engine.js');
+            const { formatTimeObject } = await import('../time-formatter.js');
+
             // Prepare response calendar info
             let responseCalendarTime = null;
             if (params.responseCalendarId) {
                 const respCal = getCalendar(params.responseCalendarId);
                 if (respCal) {
-                    const { convertToTimeObject, formatTimeObject } = await import('../time-engine.js');
                     responseCalendarTime = {
                         calendarId: respCal.id,
                         displayName: respCal.displayName,
@@ -128,6 +130,8 @@ export function registerUpdateEventTool() {
                 message += `. Changes: ${changes.join('; ')}`;
             }
 
+            const primaryTimeObj = convertToTimeObject(updatedEvent.baseTime, cal);
+
             return JSON.stringify({
                 status: 'ok',
                 error: false,
@@ -136,8 +140,8 @@ export function registerUpdateEventTool() {
                 eventTime: {
                     calendarId: cal.id,
                     displayName: cal.displayName,
-                    time: params.timeObject || (updatedEvent ? {} : null), // simplified
-                    timeStr: updatedEvent.timeStr // We might want to format this
+                    time: primaryTimeObj,
+                    timeStr: formatTimeObject(primaryTimeObj, cal)
                 },
                 responseCalendarTime: responseCalendarTime,
                 event: updatedEvent,

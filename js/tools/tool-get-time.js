@@ -41,21 +41,31 @@ export function registerGetTimeTool() {
                 targetBaseTime = convertToBaseTime(params.inputTime, sourceCal);
             }
 
+            const { formatTimeObject } = await import('../time-formatter.js');
             const results = {};
             const errors = [];
             const ids = params.calendarIds || [];
             
             if (ids.length === 0) {
                 // If no IDs provided, just use all active calendars
+                const { getActiveCalendars } = await import('../calendar-manager.js');
                 const active = getActiveCalendars();
                 for (const cal of active) {
-                    results[cal.id] = convertToTimeObject(targetBaseTime, cal);
+                    const tObj = convertToTimeObject(targetBaseTime, cal);
+                    results[cal.id] = {
+                        time: tObj,
+                        timeStr: formatTimeObject(tObj, cal)
+                    };
                 }
             } else {
                 for (const id of ids) {
                     const cal = getCalendar(id);
                     if (cal) {
-                        results[id] = convertToTimeObject(targetBaseTime, cal);
+                        const tObj = convertToTimeObject(targetBaseTime, cal);
+                        results[id] = {
+                            time: tObj,
+                            timeStr: formatTimeObject(tObj, cal)
+                        };
                     } else {
                         errors.push(`Calendar ${id} not found.`);
                     }

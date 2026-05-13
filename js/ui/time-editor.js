@@ -1,6 +1,7 @@
 import { state, saveChatState } from '../state.js';
 import { getActiveCalendars, getCalendar } from '../calendar-manager.js';
-import { convertToTimeObject, convertToBaseTime, formatTimeObject } from '../time-engine.js';
+import { convertToTimeObject, convertToBaseTime } from '../time-engine.js';
+import { formatTimeObject } from '../time-formatter.js';
 import { Popup, POPUP_TYPE, POPUP_RESULT } from '/scripts/popup.js';
 import { logger } from '../logger.js';
 

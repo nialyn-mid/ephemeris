@@ -1,7 +1,8 @@
 import { logger } from '../logger.js';
 import { state } from '../state.js';
 import { settings } from '../settings.js';
-import { convertToTimeObject, formatTimeObject } from '../time-engine.js';
+import { convertToTimeObject } from '../time-engine.js';
+import { formatTimeObject, renderFormattedTime } from '../time-formatter.js';
 import { formatCalendarDetails } from '../formatter.js';
 
 /**
@@ -15,12 +16,22 @@ export async function buildTimeInjection(calendars, { detailsConsumedInTurn, isS
     const primaryCal = calendars[0];
     const curTimeObj = convertToTimeObject(state.currentTime, primaryCal);
     lines.push(`## World Time`);
-    lines.push(`${primaryCal.displayName} [${primaryCal.id}]: ${formatTimeObject(curTimeObj, primaryCal)}`);
+    
+    const renderTimeLine = (cal, tObj) => {
+        const full = formatTimeObject(tObj, cal);
+        if (settings.injection.injectFormattedInPrompt && cal.timeFormat) {
+            const formatted = renderFormattedTime(tObj, cal);
+            return `${cal.displayName} [${cal.id}]: ${formatted} (${full})`;
+        }
+        return `${cal.displayName} [${cal.id}]: ${full}`;
+    };
+
+    lines.push(renderTimeLine(primaryCal, curTimeObj));
 
     // Add secondary calendars if available
     for (let i = 1; i < Math.min(3, calendars.length); i++) {
         const cObj = convertToTimeObject(state.currentTime, calendars[i]);
-        lines.push(`${calendars[i].displayName} [${calendars[i].id}]: ${formatTimeObject(cObj, calendars[i])}`);
+        lines.push(renderTimeLine(calendars[i], cObj));
     }
 
     // 2. Calendar Details (Hierarchical structure, notes, etc.)

@@ -1,7 +1,8 @@
 import { getContext } from '/scripts/extensions.js';
 import { logger } from '../logger.js';
 import { getCalendar } from '../calendar-manager.js';
-import { convertToBaseTime, convertToTimeObject, formatTimeObject } from '../time-engine.js';
+import { convertToBaseTime, convertToTimeObject } from '../time-engine.js';
+import { formatTimeObject } from '../time-formatter.js';
 import { getEventsInRange } from '../event-manager.js';
 import { state } from '../state.js';
 import { settings } from '../settings.js';
@@ -15,11 +16,11 @@ export function registerListEventsTool() {
     registerFunctionTool({
         name: 'eph_list_events',
         displayName: 'Ephemeris: List Events',
-        description: 'Retrieves a list of events in a specified time window, formatted in a specific calendar. Can be used to retrieve the information about a specific event.',
+        description: 'Retrieves a list of all events in a specified time window, formatted in a specific calendar. Can be used to retrieve the information about a specific event.',
         parameters: {
             type: 'object',
             properties: {
-                calendarId: calendarIdSchema('Calendar ID to format output times in.'),
+                calendarId: calendarIdSchema('Calendar ID to format output times in. Events are shared by all calendars so you can use any calendar ID.'),
                 centerTimeObject: timeObjectSchema('The central time to look around. If omitted, uses current time.'),
                 rangeBackwardSeconds: { type: 'number', description: 'Optional: How far back to look in seconds (base time units)' },
                 rangeForwardSeconds: { type: 'number', description: 'Optional: How far forward to look in seconds (base time units)' },
@@ -44,9 +45,10 @@ export function registerListEventsTool() {
                 const eTimeObj = convertToTimeObject(event.baseTime, cal);
                 const formatted = {
                     ...event,
-                    time: formatTimeObject(eTimeObj, cal),
+                    timeStr: formatTimeObject(eTimeObj, cal),
                     timeObject: eTimeObj
                 };
+                delete formatted.baseTime;
                 return JSON.stringify({ status: 'ok', events: [formatted] }, null, 2);
             }
 
@@ -56,11 +58,11 @@ export function registerListEventsTool() {
                 centerTime = convertToBaseTime(params.centerTimeObject, cal);
             }
 
-            const start = params.rangeBackwardSeconds !== undefined 
-                ? centerTime - params.rangeBackwardSeconds 
+            const start = params.rangeBackwardSeconds !== undefined
+                ? centerTime - params.rangeBackwardSeconds
                 : -Infinity;
-            const end = params.rangeForwardSeconds !== undefined 
-                ? centerTime + params.rangeForwardSeconds 
+            const end = params.rangeForwardSeconds !== undefined
+                ? centerTime + params.rangeForwardSeconds
                 : Infinity;
 
             let events = getEventsInRange(start, end);
@@ -72,7 +74,7 @@ export function registerListEventsTool() {
             // 3. Relevance-based Pruning
             if (params.maxResults && events.length > params.maxResults) {
                 const distances = settings.injection.significanceDistances;
-                
+
                 // Deep copy to avoid mutating state during sorting
                 events = JSON.parse(JSON.stringify(events));
 
@@ -85,7 +87,7 @@ export function registerListEventsTool() {
 
                 events.sort((a, b) => a._relevance - b._relevance);
                 events = events.slice(0, params.maxResults);
-                
+
                 // Cleanup temp score
                 events.forEach(e => delete e._relevance);
                 // Sort back by time
@@ -96,13 +98,12 @@ export function registerListEventsTool() {
                 const eTimeObj = convertToTimeObject(e.baseTime, cal);
                 return {
                     id: e.id,
-                    time: formatTimeObject(eTimeObj, cal),
+                    timeStr: formatTimeObject(eTimeObj, cal),
                     timeObject: eTimeObj,
                     label: e.label,
                     significance: e.significance,
                     description: e.description,
-                    tags: e.tags,
-                    baseTime: e.baseTime
+                    tags: e.tags
                 };
             });
 

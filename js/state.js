@@ -9,6 +9,25 @@ import { MODULE_NAME, settings } from './settings.js';
  */
 
 export const state = {
+    settings: {
+        enabled: true,
+        injectTime: true,
+        injectEvents: true,
+        requireShortFormat: true,
+        showFormattedInSchedule: false,
+        injectFormattedInPrompt: false,
+        summarizationStrategy: 'significant',
+        logLevel: 2, // 0: Error, 1: Warn, 2: Info, 3: Debug
+        injectionFrequency: 'turn', // 'every', 'turn', 'chat'
+        injectCalendarDetails: 'both', // 'none', 'both', 'chat', 'global'
+        rangeBackward: 3600 * 24 * 7, // 1 week
+        rangeForward: 3600 * 24 * 30, // 30 days
+        remindersEnabled: true,
+        remindersDistance: 3600 * 24, // 1 day
+        noticesEnabled: true,
+        noticesDuration: 3600 * 24, // 1 day
+        significanceMultiplier: 1.0,
+    },
     chatId: null,
     calendars: [],
     currentTime: 0,
