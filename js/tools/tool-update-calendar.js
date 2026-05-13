@@ -103,7 +103,7 @@ Tips:
 
                     // 1. Initialize target
                     let oldCalendar = isNew ? null : JSON.parse(JSON.stringify(state.calendars[existingIndex]));
-                    let targetCalendar = isNew ? { id: params.id, units: [] } : JSON.parse(JSON.stringify(oldCalendar));
+                    let targetCalendar = isNew ? { id: params.id } : JSON.parse(JSON.stringify(oldCalendar));
 
                     // 2. Apply Base Template if provided
                     if (params.baseTemplate) {
@@ -112,6 +112,7 @@ Tips:
                             throw new RejectedCallError(`Base template '${params.baseTemplate}' not found.`);
                         }
                         const templateClone = JSON.parse(JSON.stringify(baseCal));
+                        // Merge template, then current target (target overrides template)
                         targetCalendar = { ...templateClone, ...targetCalendar };
                         targetCalendar.id = params.id; // Ensure ID remains correct
                     }
@@ -157,7 +158,7 @@ Tips:
                     if (isNew) {
                         v.require(targetCalendar.displayName, 'displayName is required for new calendars');
                         v.require(targetCalendar.abbreviation, 'abbreviation is required for new calendars');
-                        v.require(targetCalendar.units && targetCalendar.units.length > 0, 'units are required for new calendars');
+                        v.require(targetCalendar.units && targetCalendar.units.length > 0, 'units are required for new calendars (none found in arguments or inherited from template)');
                     }
 
                     if (settings.requireShortFormat) {
@@ -198,7 +199,8 @@ Tips:
                                 }
                             }
                             if (missingChars.length > 0) {
-                                const available = targetCalendar.units.map(u => `${u.name}(${u.formatChar || '?'})`).join(', ');
+                                const availableList = (targetCalendar.units || []).map(u => `${u.name}(${u.formatChar || '?'})`).join(', ');
+                                const available = availableList || 'none (no units defined)';
                                 v.require(false, `The following characters in timeFormat do not match any unit 'formatChar': ${missingChars.join(', ')}. Available units: ${available}.`);
                             }
                         }
