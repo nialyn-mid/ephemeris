@@ -40,6 +40,7 @@ export function renderFormattedTime(timeObject, calendar) {
     });
 
     // Replace format sequences
+    const replacements = [];
     for (const [char, unit] of unitMap) {
         const regex = new RegExp(`${char}+`, 'g');
         output = output.replace(regex, (match) => {
@@ -48,34 +49,34 @@ export function renderFormattedTime(timeObject, calendar) {
 
             const length = match.length;
             const strVal = val.toString();
+            let result = strVal;
 
             // If it's a number, pad it
             if (typeof val === 'number') {
-                return strVal.padStart(length, '0');
-            }
-
-            // If it's a string (variable/cyclic/string types)
-            if (typeof val === 'string') {
+                result = strVal.padStart(length, '0');
+            } else if (typeof val === 'string') {
                 // Short formats (1-2 chars) often expect numeric index (e.g. MM -> 01)
                 if (length < 3 && (unit.type === 'variable' || unit.type === 'cyclic' || unit.type === 'string')) {
                     const index = unit.values.findIndex(v => (typeof v === 'object' ? v.name : v) === val);
                     if (index !== -1) {
                         const numericVal = index + 1; // Default to 1-based for display
-                        return numericVal.toString().padStart(length, '0');
+                        result = numericVal.toString().padStart(length, '0');
                     }
+                } else if (length === 3 && strVal.length > 3) {
+                    // Medium formats (exactly 3 chars) usually mean truncated label (e.g. MMM -> Jan)
+                    result = strVal.substring(0, 3);
                 }
-
-                // Medium formats (exactly 3 chars) usually mean truncated label (e.g. MMM -> Jan)
-                if (length === 3 && strVal.length > 3) {
-                    return strVal.substring(0, 3);
-                }
-
-                // Long formats (4+ chars) usually mean full label (e.g. MMMM -> January)
             }
 
-            return strVal;
+            replacements.push(result);
+            return `__REPL_${replacements.length - 1}__`;
         });
     }
+
+    // Restore replacements
+    output = output.replace(/__REPL_(\d+)__/g, (match, p1) => {
+        return replacements[parseInt(p1)];
+    });
 
     // Restore literals
     output = output.replace(/__LITERAL_(\d+)__/g, (match, p1) => {

@@ -2,116 +2,11 @@ import { getContext } from '/scripts/extensions.js';
 import { logger } from '../logger.js';
 import { state, saveChatState } from '../state.js';
 import { settings } from '../settings.js';
-import { getCalendar } from '../calendar-manager.js';
+import { getCalendar, resolveLengths } from '../calendar-manager.js';
 import { RejectedCallError } from '../errors.js';
 import { lengthInSubUnitsSchema } from './infra/schema.js';
 import { eventSource } from '/scripts/events.js';
 
-/**
- * Resolves relative unit lengths (lengthInSubUnits) into absolute base seconds (lengthInBase).
- */
-function resolveLengths(units) {
-    const resolved = new Map();
-
-    // Seed with explicitly defined lengths
-    for (const unit of units) {
-        if (unit.lengthInBase) {
-            resolved.set(unit.name, unit.lengthInBase);
-        }
-    }
-
-    // Iteratively resolve relative lengths
-    let changed = true;
-    let iterations = 0;
-    const maxIterations = units.length * 2; // Prevent infinite loops
-
-    while (changed && iterations < maxIterations) {
-        changed = false;
-        iterations++;
-
-        for (const unit of units) {
-            if (resolved.has(unit.name)) continue;
-
-            if (unit.lengthInSubUnits) {
-                const subUnitName = Object.keys(unit.lengthInSubUnits)[0];
-                const multiplier = unit.lengthInSubUnits[subUnitName];
-
-                if (resolved.has(subUnitName)) {
-                    unit.lengthInBase = resolved.get(subUnitName) * multiplier;
-                    resolved.set(unit.name, unit.lengthInBase);
-                    changed = true;
-                }
-            } else if ((unit.type === 'variable' || unit.type === 'cyclic') && Array.isArray(unit.values)) {
-                // If it's cyclic and all values are strings, it needs an external length (already handled by Seed or SubUnits)
-                // If it's cyclic or variable and values are objects, we sum their lengths.
-                let allValuesResolved = true;
-                let totalLength = 0;
-                let hasObjects = false;
-
-                for (const v of unit.values) {
-                    if (typeof v === 'object') {
-                        hasObjects = true;
-                        if (v.lengthInBase) {
-                            totalLength += v.lengthInBase;
-                        } else if (v.lengthInSubUnits) {
-                            const subName = Object.keys(v.lengthInSubUnits)[0];
-                            const mult = v.lengthInSubUnits[subName];
-                            if (resolved.has(subName)) {
-                                v.lengthInBase = resolved.get(subName) * mult;
-                                totalLength += v.lengthInBase;
-                            } else {
-                                allValuesResolved = false;
-                                break;
-                            }
-                        } else {
-                            allValuesResolved = false;
-                            break;
-                        }
-                    }
-                }
-
-                if (hasObjects && allValuesResolved) {
-                    unit.lengthInBase = totalLength;
-                    resolved.set(unit.name, unit.lengthInBase);
-                    changed = true;
-                }
-            }
-        }
-    }
-
-    // Final check for unresolvable units with improved error reporting
-    const unresolved = units.filter(u => u.type !== 'string' && !u.lengthInBase);
-
-    if (unresolved.length > 0) {
-        const errorDetails = unresolved.map(u => {
-            if (u.lengthInSubUnits) {
-                const subUnitName = Object.keys(u.lengthInSubUnits)[0];
-                const subUnitExists = units.find(target => target.name === subUnitName);
-                if (!subUnitExists) {
-                    return `'${u.name}' depends on non-existent unit '${subUnitName}'`;
-                } else {
-                    return `'${u.name}' depends on '${subUnitName}' which is also unresolved`;
-                }
-            } else if (u.type === 'number') {
-                return `'${u.name}' needs 'lengthInBase' or 'lengthInSubUnits'`;
-            } else if (u.type === 'variable') {
-                return `'${u.name}' must have lengths defined for each entry in 'values'`;
-            } else if (u.type === 'cyclic') {
-                return `'${u.name}' must have a uniform 'lengthInBase' OR individual lengths defined for each entry in 'values'`;
-            }
-            return null;
-        }).filter(Boolean);
-
-        const primaryError = unresolved[0];
-        let message = `Could not resolve length for unit '${primaryError.name}'.`;
-
-        if (errorDetails.length > 0) {
-            message += ` Root issues found: ${errorDetails.join('; ')}.`;
-        }
-
-        throw new RejectedCallError(message);
-    }
-}
 
 
 export function registerUpdateCalendarTool() {
@@ -123,9 +18,12 @@ If the calendar ID already exists, it will be patched with the provided fields.
 If it is a new ID, it will be created (requires displayName, abbreviation, and units/baseTemplate).
 
 Crucial Requirements:
-- Each unit MUST have a unique 'name'. This name is used as the key in time objects and for relative length definitions.${settings.requireShortFormat ? "\n- Each unit MUST have a unique 'formatChar' (single unique character like 'H' or 'Y') and the calendar MUST have a 'timeFormat' string (e.g. \"YYYY-MM-DD HH:mm:ss\").\n- All letters used in 'timeFormat' MUST correspond to a defined 'formatChar' in a unit, or be wrapped in [brackets] if they are literal text." : ""}
-- Each unit must have a unique 'formatChar' (if short format is enabled).
+- Each unit MUST have a unique 'name'. This name is used as the key in time objects and for relative length definitions.${settings.requireShortFormat ? "\n- Each unit MUST have a unique 'formatChar' (single unique character like 'H' or 'Y') and the calendar MUST have a 'timeFormat' string (e.g. \"YYYY-MM-DD HH:mm:ss\").\n- **IMPORTANT:** All letters used in 'timeFormat' MUST correspond to a defined 'formatChar' in a unit, or be wrapped in [brackets] if they are literal text. (Many calls fail because of not following this rule.)" : ""}
 - If 'superUnit' is used, it must refer to another existing unit in the calendar.
+
+Merging Behavior:
+- If a 'baseTemplate' is provided, the calendar inherits its units. Providing 'units' in the arguments will PATCH the template units by 'name'.
+- To replace all units entirely, do not use a baseTemplate.
 
 Supported Unit Types:
 - 'number': Basic division (e.g. Hour = 3600s). Use startAtOne: true for 1-indexed (e.g. Day 1). Use startValue (e.g. 1970) for timeline anchoring.
@@ -190,7 +88,7 @@ Tips:
                     conversionFactor: { type: 'number', description: 'Speed relative to base time (default 1.0).' },
                     notes: { type: 'string', description: 'Cultural context or narrative flavor.' },
                     abbreviation: { type: 'string', description: 'Short label (e.g. ISO 8601, ABC)' },
-                    timeFormat: { type: 'string', description: 'A template for short time display (e.g. "YYYY-MM-DD HH:mm:ss"). Must ONLY contain format characters defined in units.' }
+                    timeFormat: { type: 'string', description: 'A template for short time display (e.g. "YYYY-MM-DD HH:mm:ss"). MUST ONLY contain format characters defined in the "formatChar" of defined units.' }
                 },
                 required: ['id'],
             },
@@ -220,7 +118,19 @@ Tips:
 
                     // 3. Apply Overrides
                     if (params.displayName) targetCalendar.displayName = params.displayName;
-                    if (params.units) targetCalendar.units = params.units;
+                    if (params.units) {
+                        if (!targetCalendar.units) targetCalendar.units = [];
+                        for (const newUnit of params.units) {
+                            const idx = targetCalendar.units.findIndex(u => u.name === newUnit.name);
+                            if (idx !== -1) {
+                                // Patch existing unit
+                                targetCalendar.units[idx] = { ...targetCalendar.units[idx], ...newUnit };
+                            } else {
+                                // Add new unit
+                                targetCalendar.units.push(newUnit);
+                            }
+                        }
+                    }
                     if (params.epochOffset !== undefined) targetCalendar.epochOffset = params.epochOffset;
                     if (params.conversionFactor !== undefined) targetCalendar.conversionFactor = params.conversionFactor;
                     if (params.notes !== undefined) targetCalendar.notes = params.notes;
@@ -229,7 +139,14 @@ Tips:
 
                     // 4. Resolve relative lengths and sort
                     if (targetCalendar.units) {
-                        resolveLengths(targetCalendar.units);
+                        try {
+                            resolveLengths(targetCalendar.units, true);
+                        } catch (e) {
+                            if (e.name === 'ResolutionError') {
+                                throw new RejectedCallError(e.message);
+                            }
+                            throw e;
+                        }
                         targetCalendar.units.sort((a, b) => (b.lengthInBase || 0) - (a.lengthInBase || 0));
                     }
 
@@ -263,9 +180,26 @@ Tips:
                             }
 
                             const strippedFormat = targetCalendar.timeFormat.replace(/\[(.*?)\]/g, '');
+
+                            // Detect unbracketed words (multiple different letters)
+                            const words = strippedFormat.match(/[a-zA-Z]{2,}/g) || [];
+                            for (const word of words) {
+                                const uniqueChars = new Set(word.split(''));
+                                if (uniqueChars.size > 1) {
+                                    v.warn(false, `The word '${word}' in timeFormat is being interpreted as individual format characters. If this is intended to be literal text, wrap it in square brackets like [${word}].`);
+                                }
+                            }
+
+                            const missingChars = [];
                             const usedChars = new Set(strippedFormat.match(/[a-zA-Z]/g) || []);
                             for (const char of usedChars) {
-                                v.require(definedChars.has(char), `timeFormat uses undefined character '${char}'.`);
+                                if (!definedChars.has(char)) {
+                                    missingChars.push(`'${char}'`);
+                                }
+                            }
+                            if (missingChars.length > 0) {
+                                const available = targetCalendar.units.map(u => `${u.name}(${u.formatChar || '?'})`).join(', ');
+                                v.require(false, `The following characters in timeFormat do not match any unit 'formatChar': ${missingChars.join(', ')}. Available units: ${available}.`);
                             }
                         }
                     }
@@ -313,8 +247,13 @@ Tips:
                         message: finalMessage,
                         calendarId: targetCalendar.id,
                         isNew: isNew,
-                        changes: changes
+                        changes: changes,
+                        warnings: v.getWarnings().length > 0 ? v.getWarnings() : undefined
                     }, null, 2);
+                } catch (e) {
+                    const { signalFailure } = await import('./infra/tool-queue.js');
+                    signalFailure('calendar', params.id);
+                    throw e;
                 } finally {
                     provideDependency('calendar', params.id);
                 }

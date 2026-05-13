@@ -29,11 +29,16 @@ export function registerGetTimeTool() {
         },
         action: async (params) => {
             const { convertToBaseTime } = await import('../time-engine.js');
+            const { waitForDependency, isFailed } = await import('./infra/tool-queue.js');
             
             let targetBaseTime = state.currentTime;
 
             if (params.inputTime) {
                 const sourceId = params.sourceCalendarId || params.source_calendar_id;
+                await waitForDependency('calendar', sourceId);
+                if (isFailed('calendar', sourceId)) {
+                    throw new RejectedCallError(`Source calendar '${sourceId}' failed to be created correctly and cannot be used.`);
+                }
                 const sourceCal = getCalendar(sourceId);
                 if (!sourceCal) {
                     throw new RejectedCallError(`Source calendar '${sourceId}' not found. It is required when inputTime is provided.`);
@@ -59,6 +64,11 @@ export function registerGetTimeTool() {
                 }
             } else {
                 for (const id of ids) {
+                    await waitForDependency('calendar', id);
+                    if (isFailed('calendar', id)) {
+                        errors.push(`Calendar ${id} failed to be created.`);
+                        continue;
+                    }
                     const cal = getCalendar(id);
                     if (cal) {
                         const tObj = convertToTimeObject(targetBaseTime, cal);

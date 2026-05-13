@@ -9,6 +9,7 @@ import { getCalendar } from '../../calendar-manager.js';
 
 const registry = new Map();
 const announcements = new Set();
+const failures = new Set();
 
 /**
  * Announces that a tool is starting and what resource it is creating.
@@ -16,7 +17,24 @@ const announcements = new Set();
 export function announceCreator(type, id) {
     const key = `${type}:${id}`;
     announcements.add(key);
+    failures.delete(key);
     logger.debug(`[QUEUE] Creator announced: ${key}`);
+}
+
+/**
+ * Signals that a tool failed to create a resource.
+ */
+export function signalFailure(type, id) {
+    const key = `${type}:${id}`;
+    failures.add(key);
+    provideDependency(type, id);
+}
+
+/**
+ * Returns true if a resource creation attempt just failed.
+ */
+export function isFailed(type, id) {
+    return failures.has(`${type}:${id}`);
 }
 
 /**

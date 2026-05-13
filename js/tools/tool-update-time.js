@@ -31,9 +31,12 @@ export function registerUpdateTimeTool() {
 
             const { calculateDeltaSeconds, convertToTimeObject } = await import('../time-engine.js');
             const { formatTimeObject } = await import('../time-formatter.js');
-            const { waitForDependency } = await import('./infra/tool-queue.js');
+            const { waitForDependency, isFailed } = await import('./infra/tool-queue.js');
 
             await waitForDependency('calendar', calId);
+            if (isFailed('calendar', calId)) {
+                throw new RejectedCallError(`Calendar '${calId}' failed to be created correctly and cannot be used.`);
+            }
 
             const cal = getCalendar(calId);
             if (!cal) {
@@ -43,6 +46,27 @@ export function registerUpdateTimeTool() {
             const { Validator } = await import('./infra/schema.js');
             const v = new Validator('Validation failed for time update');
             v.require(timeObj || timeDelta !== undefined, 'Either timeObject (absolute) or timeDelta (relative) must be provided');
+
+            if (timeObj) {
+                for (const key of Object.keys(timeObj)) {
+                    const unit = cal.units.find(u => u.name === key);
+                    if (!unit) v.require(false, `Unit '${key}' not found in calendar '${cal.id}'`);
+                    else if (unit.type !== 'cyclic' && (!unit.lengthInBase || unit.lengthInBase <= 0)) {
+                        v.require(false, `Unit '${key}' has unresolved length in calendar definition.`);
+                    }
+                }
+            }
+            if (timeDelta) {
+                for (const key of Object.keys(timeDelta)) {
+                    if (key === '_baseSeconds') continue;
+                    const unit = cal.units.find(u => u.name === key);
+                    if (!unit) v.require(false, `Unit '${key}' not found in calendar '${cal.id}'`);
+                    else if (unit.type !== 'cyclic' && (!unit.lengthInBase || unit.lengthInBase <= 0)) {
+                        v.require(false, `Unit '${key}' has unresolved length in calendar definition.`);
+                    }
+                }
+            }
+
             v.throwIfErrors();
 
 

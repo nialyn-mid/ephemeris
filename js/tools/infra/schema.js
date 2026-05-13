@@ -9,6 +9,7 @@ export class Validator {
     constructor(prefix = 'Validation failed') {
         this.prefix = prefix;
         this.errors = [];
+        this.warnings = [];
     }
 
     require(condition, message) {
@@ -17,12 +18,22 @@ export class Validator {
         }
     }
 
+    warn(condition, message) {
+        if (!condition) {
+            this.warnings.push(message);
+        }
+    }
+
+    getWarnings() {
+        return this.warnings;
+    }
+
     throwIfErrors() {
         if (this.errors.length > 0) {
-            // Append punctuation correctly
             const cleanPrefix = this.prefix.trim();
             const sep = cleanPrefix.endsWith(':') ? ' ' : ': ';
-            throw new RejectedCallError(`${cleanPrefix}${sep}${this.errors.join('; ')}.`);
+            const joined = this.errors.map(e => e.trim().replace(/\.+$/, '')).join('. ');
+            throw new RejectedCallError(`${cleanPrefix}${sep}${joined}.`);
         }
     }
 }

@@ -42,14 +42,20 @@ export function registerUpdateEventTool() {
             required: ['calendarId'],
         },
         action: async (params) => {
-            const { waitForDependency, provideDependency, announceCreator } = await import('./infra/tool-queue.js');
+            const { waitForDependency, provideDependency, announceCreator, isFailed } = await import('./infra/tool-queue.js');
             if (params.id) {
                 announceCreator('event', params.id);
             }
             try {
                 await waitForDependency('calendar', params.calendarId);
+                if (isFailed('calendar', params.calendarId)) {
+                    throw new RejectedCallError(`Calendar '${params.calendarId}' failed to be created correctly in this turn and cannot be used.`);
+                }
             if (params.responseCalendarId) {
                 await waitForDependency('calendar', params.responseCalendarId);
+                if (isFailed('calendar', params.responseCalendarId)) {
+                    throw new RejectedCallError(`Response calendar '${params.responseCalendarId}' failed to be created correctly and cannot be used.`);
+                }
             }
 
             const cal = getCalendar(params.calendarId);

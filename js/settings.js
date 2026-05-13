@@ -15,7 +15,7 @@ export const defaultSettings = {
             displayName: 'IRL International Standard',
             abbreviation: 'ISO 8601',
             units: [
-                { name: 'Year', type: 'number', lengthInBase: 31536000, startValue: 1970, formatChar: 'Y' },
+                { name: 'Year', type: 'number', lengthInSubUnits: { 'Day': 365 }, startValue: 1970, formatChar: 'Y' },
                 {
                     name: 'Month',
                     type: 'variable',
@@ -35,17 +35,17 @@ export const defaultSettings = {
                         { name: 'December', lengthInSubUnits: { 'Day': 31 } }
                     ]
                 },
-                { name: 'Day', type: 'number', lengthInBase: 86400, startAtOne: true, formatChar: 'D', superUnit: 'Month' },
+                { name: 'Day', type: 'number', lengthInSubUnits: { 'Hour': 24 }, startAtOne: true, formatChar: 'D', superUnit: 'Month' },
                 {
                     name: 'Weekday',
                     type: 'cyclic',
-                    lengthInBase: 86400,
+                    lengthInSubUnits: { 'Day': 1 },
                     offset: 4, // Epoch 0 is a Thursday. Offset 4 maps to index 4 (Thursday) if list starts at Sunday.
                     values: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
                     formatChar: 'W'
                 },
-                { name: 'Hour', type: 'number', lengthInBase: 3600, formatChar: 'H' },
-                { name: 'Minute', type: 'number', lengthInBase: 60, formatChar: 'm' },
+                { name: 'Hour', type: 'number', lengthInSubUnits: { 'Minute': 60 }, formatChar: 'H' },
+                { name: 'Minute', type: 'number', lengthInSubUnits: { 'Second': 60 }, formatChar: 'm' },
                 { name: 'Second', type: 'number', lengthInBase: 1, formatChar: 's' }
             ],
             timeFormat: 'YYYY-MM-DD HH:mm:ss (WWWW)',

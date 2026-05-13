@@ -114,6 +114,7 @@ function bindEvents() {
         if (panelEl.style.display !== 'none') {
             updateDropdown();
             updateScrollUnits();
+            updateClock();
             renderList();
         }
     });
@@ -220,6 +221,7 @@ export function toggleSchedulePanel() {
         panelEl.style.display = 'flex';
         updateDropdown();
         updateScrollUnits();
+        updateClock();
         clampToBounds();
         renderList();
     } else {
@@ -237,6 +239,19 @@ function updateFormatToggle() {
         panelEl.classList.remove('eph-format-short');
         btn.classList.remove('active');
     }
+    updateClock();
+}
+
+function updateClock() {
+    if (!panelEl || panelEl.style.display === 'none') return;
+    const clockEl = panelEl.querySelector('#eph-schedule-current-time');
+    const cal = getCalendar(displayCalendarId);
+    if (!cal) {
+        clockEl.textContent = '--:--';
+        return;
+    }
+    const tObj = convertToTimeObject(state.currentTime, cal);
+    clockEl.textContent = renderFormattedTime(tObj, cal);
 }
 
 function updateDropdown() {
@@ -336,6 +351,7 @@ function jumpToTime() {
 
 
 function renderList() {
+    updateClock();
     const container = panelEl.querySelector('#eph-schedule-list');
     container.innerHTML = '';
     loadedCount = 0;
