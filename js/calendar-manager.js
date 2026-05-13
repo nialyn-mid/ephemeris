@@ -1,6 +1,18 @@
 import { logger } from './logger.js';
 import { state } from './state.js';
 import { settings } from './settings.js';
+import { convertToTimeObject } from './time-engine.js';
+import { renderFormattedTime } from './time-formatter.js';
+
+/**
+ * Gets the current world time formatted for a specific calendar.
+ */
+export function getCurrentFormattedTime(calendarId) {
+    const cal = getCalendar(calendarId);
+    if (!cal) return 'Unknown Calendar';
+    const tObj = convertToTimeObject(state.currentTime, cal);
+    return renderFormattedTime(tObj, cal);
+}
 
 /**
  * Calendar Manager
@@ -23,7 +35,7 @@ export function resolveLengths(units, throwOnError = false) {
     // Iteratively resolve relative lengths
     let changed = true;
     let iterations = 0;
-    const maxIterations = units.length * 2; 
+    const maxIterations = units.length * 2;
 
     while (changed && iterations < maxIterations) {
         changed = false;
@@ -84,14 +96,14 @@ export function resolveLengths(units, throwOnError = false) {
                 const chain = [startUnit.name];
                 let current = startUnit;
                 const visited = new Set();
-                
+
                 while (current && (current.lengthInSubUnits || current.type === 'variable' || current.type === 'cyclic')) {
                     if (visited.has(current.name)) {
                         chain.push(`(CIRCULAR: ${current.name})`);
                         break;
                     }
                     visited.add(current.name);
-                    
+
                     let nextName = null;
                     if (current.lengthInSubUnits) {
                         nextName = Object.keys(current.lengthInSubUnits)[0];
@@ -122,7 +134,7 @@ export function resolveLengths(units, throwOnError = false) {
             const primaryError = unresolved[0];
             let message = `Could not resolve length for unit '${primaryError.name}'.`;
             if (errorDetails.length > 0) message = errorDetails[0]; // Use the detailed one as primary
-            
+
             const err = new Error(message);
             err.name = 'ResolutionError';
             throw err;
