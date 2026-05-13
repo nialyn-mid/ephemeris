@@ -78,6 +78,21 @@ export function registerUpdateEventTool() {
             let existing = null;
             if (params.id) {
                 existing = state.events.find(e => e.id === params.id);
+            } else if (params.label) {
+                const matches = state.events.filter(e => e.label === params.label);
+                if (matches.length === 1) {
+                    existing = matches[0];
+                } else if (matches.length > 1) {
+                    const { convertToTimeObject } = await import('../time-engine.js');
+                    const { formatTimeObject } = await import('../time-formatter.js');
+                    const details = matches.map(m => {
+                        const cal = getCalendar(m.sourceCalendar);
+                        const tStr = cal ? formatTimeObject(convertToTimeObject(m.baseTime, cal), cal) : `${m.baseTime} (raw)`;
+                        const desc = m.description ? ` - "${m.description.substring(0, 100)}${m.description.length > 100 ? '...' : ''}"` : '';
+                        return `- ID: ${m.id} [${tStr}]${desc}`;
+                    }).join('\n');
+                    throw new RejectedCallError(`Multiple events found with label "${params.label}". Please provide a specific 'id' to update:\n${details}`);
+                }
             }
 
             let updatedEvent = null;
@@ -86,7 +101,7 @@ export function registerUpdateEventTool() {
             if (isNew) {
                 // Create mode validation
                 const { Validator } = await import('./infra/schema.js');
-                const prefix = params.id ? `Event ID '${params.id}' not found. To create it:` : 'Validation failed for new event:';
+                const prefix = params.id ? `Event ID '${params.id}' not found. To create it:` : (params.label ? `No existing event found with label "${params.label}". Creating a new one:` : 'Validation failed for new event:');
                 const v = new Validator(prefix);
 
                 v.require(params.label, 'label is required for new events');
@@ -98,8 +113,9 @@ export function registerUpdateEventTool() {
                 updatedEvent = state.events.find(e => e.id === eventId);
             } else {
                 // Update mode
+                const targetId = params.id || existing.id;
                 const oldEvent = JSON.parse(JSON.stringify(existing));
-                updatedEvent = updateEvent(params.id, eventData);
+                updatedEvent = updateEvent(targetId, eventData);
             }
 
 
