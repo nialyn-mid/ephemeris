@@ -108,6 +108,10 @@ export function calculateDeltaSeconds(deltaObject, calendar) {
     return Math.floor(deltaSeconds / speed);
 }
 
+function mod(n, m) {
+    return ((n % m) + m) % m;
+}
+
 export function convertToTimeObject(baseTime, calendar) {
     if (!calendar || !calendar.units) return {};
 
@@ -137,8 +141,7 @@ export function convertToTimeObject(baseTime, calendar) {
             const hasObjects = typeof unit.values[0] === 'object';
             
             if (hasObjects) {
-                let cycleTime = totalTime % unit.lengthInBase;
-                if (cycleTime < 0) cycleTime += unit.lengthInBase;
+                let cycleTime = mod(totalTime, unit.lengthInBase);
                 
                 let accumulated = 0;
                 let foundIndex = 0;
@@ -154,8 +157,7 @@ export function convertToTimeObject(baseTime, calendar) {
                 timeObject[unit.name] = unit.values[foundIndex].name;
             } else {
                 let cycles = Math.floor(totalTime / unit.lengthInBase);
-                let index = (cycles + offset) % unit.values.length;
-                if (index < 0) index += unit.values.length;
+                let index = mod(cycles + offset, unit.values.length);
                 timeObject[unit.name] = unit.values[index];
             }
             continue;
@@ -164,7 +166,8 @@ export function convertToTimeObject(baseTime, calendar) {
         if (unit.type === 'variable' && Array.isArray(unit.values)) {
             // For variable units, we MUST consume from the main 'remaining' pool
             // But we find the 'activeName' based on the specified pool
-            let tempRemaining = calcRemaining;
+            // Handle negative time by normalizing to a positive cycle offset
+            let tempRemaining = mod(calcRemaining, unit.lengthInBase);
             let activeName = unit.values[0].name;
             for (const v of unit.values) {
                 if (tempRemaining >= v.lengthInBase) {
@@ -176,28 +179,21 @@ export function convertToTimeObject(baseTime, calendar) {
             }
             timeObject[unit.name] = activeName;
             
-            // Still MUST update the global 'remaining' for the next unit in the standard hierarchy
-            let actualRemaining = remaining;
-            for (const v of unit.values) {
-                if (actualRemaining >= v.lengthInBase) {
-                    actualRemaining -= v.lengthInBase;
-                } else {
-                    break;
-                }
-            }
-            remaining = actualRemaining;
+            // CRITICAL: Update the global 'remaining' so the next unit (e.g. Day) 
+            // receives the remainder WITHIN this variable unit.
+            remaining = tempRemaining;
             remainders[unit.name] = remaining;
             continue;
         }
 
         let val = Math.floor(calcRemaining / unit.lengthInBase);
         
-        // Update main pool
-        remaining = remaining % unit.lengthInBase;
+        // Update main pool using non-negative modulo
+        remaining = mod(remaining, unit.lengthInBase);
         remainders[unit.name] = remaining;
         
         if (unit.type === 'string' && Array.isArray(unit.values)) {
-            const index = val >= 0 ? val % unit.values.length : 0; 
+            const index = mod(val, unit.values.length); 
             timeObject[unit.name] = unit.values[index];
         } else {
             let startOffset = unit.startValue !== undefined ? unit.startValue : (unit.startAtOne ? 1 : 0);
