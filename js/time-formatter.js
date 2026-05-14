@@ -36,7 +36,7 @@ export function renderFormattedTime(timeObject, calendar) {
     const literals = [];
     output = output.replace(/\[(.*?)\]/g, (match, p1) => {
         literals.push(p1);
-        return `__LITERAL_${literals.length - 1}__`;
+        return `\x01L${literals.length - 1}\x01`;
     });
 
     // Replace format sequences
@@ -69,17 +69,17 @@ export function renderFormattedTime(timeObject, calendar) {
             }
 
             replacements.push(result);
-            return `__REPL_${replacements.length - 1}__`;
+            return `\x02R${replacements.length - 1}\x02`;
         });
     }
 
     // Restore replacements
-    output = output.replace(/__REPL_(\d+)__/g, (match, p1) => {
+    output = output.replace(/\x02R(\d+)\x02/g, (match, p1) => {
         return replacements[parseInt(p1)];
     });
 
     // Restore literals
-    output = output.replace(/__LITERAL_(\d+)__/g, (match, p1) => {
+    output = output.replace(/\x01L(\d+)\x01/g, (match, p1) => {
         return literals[parseInt(p1)];
     });
 

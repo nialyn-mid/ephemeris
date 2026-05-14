@@ -1,6 +1,6 @@
 {
   "display_name": "Ephemeris",
-  "loading_order": 20,
+  "loading_order": 21,
   "requires": [],
   "optional": [],
   "js": "index.js",

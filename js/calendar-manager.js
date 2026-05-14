@@ -1,8 +1,8 @@
 import { logger } from './logger.js';
 import { state } from './state.js';
 import { settings } from './settings.js';
-import { convertToTimeObject } from './time-engine.js';
-import { renderFormattedTime } from './time-formatter.js';
+import { convertToTimeObject, convertToBaseTime, calculateDeltaSeconds } from './time-engine.js';
+import { renderFormattedTime, parseFormattedTime } from './time-formatter.js';
 
 /**
  * Gets the current world time formatted for a specific calendar.
@@ -12,6 +12,33 @@ export function getCurrentFormattedTime(calendarId) {
     if (!cal) return 'Unknown Calendar';
     const tObj = convertToTimeObject(state.currentTime, cal);
     return renderFormattedTime(tObj, cal);
+}
+
+/**
+ * Shifts a formatted date by a delta and returns the new formatted date.
+ * sourceCalendarId: ID of the calendar used for formattedDate
+ * formattedDate: The date string to shift
+ * deltaCalendarId: ID of the calendar used for deltaObject
+ * deltaObject: Time object representing the shift (e.g. { Day: 1 })
+ * outputCalendarId: ID of the calendar to format the result in
+ */
+export function getShiftedFormattedTime(sourceCalendarId, formattedDate, deltaCalendarId, deltaObject, outputCalendarId) {
+    const sourceCal = getCalendar(sourceCalendarId);
+    const deltaCal = getCalendar(deltaCalendarId);
+    const outputCal = getCalendar(outputCalendarId);
+
+    if (!sourceCal || !deltaCal || !outputCal) return 'Unknown Calendar';
+
+    const sourceTObj = parseFormattedTime(formattedDate, sourceCal);
+    if (!sourceTObj) return 'Invalid Date';
+
+    const sourceBase = convertToBaseTime(sourceTObj, sourceCal);
+    const deltaSecs = calculateDeltaSeconds(deltaObject, deltaCal);
+    
+    const resultBase = sourceBase + deltaSecs;
+    const resultTObj = convertToTimeObject(resultBase, outputCal);
+    
+    return renderFormattedTime(resultTObj, outputCal);
 }
 
 /**
